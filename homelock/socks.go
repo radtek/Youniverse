@@ -4,43 +4,9 @@ import (
 	"errors"
 	"net"
 	"strconv"
+    
+    . "github.com/ssoor/youniverse/homelock/socksd"
 )
-type Upstream struct {
-	Type     string `json:"type"`
-	Crypto   string `json:"crypto"`
-	Password string `json:"password"`
-	Address  string `json:"address"`
-}
-
-type PACRule struct {
-	Name        string `json:"name"`
-	Proxy       string `json:"proxy"`
-	SOCKS4      string `json:"socks4"`
-	SOCKS5      string `json:"socks5"`
-	LocalRules  string `json:"local_rule_file"`
-	RemoteRules string `json:"remote_rule_file"`
-}
-
-type PAC struct {
-	Rules    []PACRule `json:"rules"`
-	Address  string    `json:"address"`
-	Upstream Upstream  `json:"upstream"`
-}
-
-type Proxy struct {
-	HTTP            string     `json:"http"`
-	SOCKS4          string     `json:"socks4"`
-	SOCKS5          string     `json:"socks5"`
-	Crypto          string     `json:"crypto"`
-	Password        string     `json:"password"`
-	DNSCacheTimeout int        `json:"dnsCacheTimeout"`
-	Upstreams       []Upstream `json:"upstreams"`
-}
-
-type Config struct {
-	PAC     PAC     `json:"pac"`
-	Proxies []Proxy `json:"proxies"`
-}
 
 var (
 	ErrorSocketUnavailable error = errors.New("socket port not find")
