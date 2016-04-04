@@ -19,5 +19,5 @@ func main() {
     
     homelock.StartHomelock("default",false)
     
-    youniverse.StartYouniverse(8888,[]string{"http://localhost:8000","http://localhost:8001","http://localhost:8002","http://localhost:8003"})
+    youniverse.StartYouniverse(8888,64<<20,[]string{"http://localhost:8000","http://localhost:8001","http://localhost:8002","http://localhost:8003"})
 }

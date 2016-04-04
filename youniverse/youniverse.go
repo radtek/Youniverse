@@ -10,7 +10,7 @@ import (
 
 var cache *groupcache.Group
 
-func StartYouniverse(port int, peer_urls []string) {
+func StartYouniverse(port int16,max_size int64, peer_urls []string) {
 	backendURLs := []string{"http://localhost/youniverse/resource"}
 
 	peers := groupcache.NewHTTPPool("http://localhost:" + strconv.Itoa(port))
@@ -25,7 +25,7 @@ func StartYouniverse(port int, peer_urls []string) {
 	client := NewBackend(backendURLs)
 	log.Info.Println("Set Youiverse backend interfase:", backendURLs)
 
-	cache = groupcache.NewGroup("resource", 64<<20, groupcache.GetterFunc(
+	cache = groupcache.NewGroup("resource", max_size, groupcache.GetterFunc(
 		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
 			dest.SetBytes([]byte(client.Get(key)))
 			return nil
