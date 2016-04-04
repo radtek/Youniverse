@@ -11,10 +11,11 @@ import (
 var cache *groupcache.Group
 
 func StartYouniverse(port int16,max_size int64, peer_urls []string) {
-	backendURLs := []string{"http://localhost/youniverse/resource"}
+    http_addr := "localhost:"+strconv.Itoa(int(port))
+	backendURLs := []string{"http://localhost/youniverse/resource/"}
 
-	peers := groupcache.NewHTTPPool("http://localhost:" + strconv.Itoa(port))
-	log.Info.Println("Create Youiverse HTTP pool: http://localhost:" + strconv.Itoa(port))
+	peers := groupcache.NewHTTPPool("http://"+http_addr)
+	log.Info.Println("Create Youiverse HTTP pool: http://"+http_addr)
 
 	log.Info.Println("Set Youiverse peer:")
 	for _, peer_url := range peer_urls {
@@ -31,5 +32,5 @@ func StartYouniverse(port int16,max_size int64, peer_urls []string) {
 			return nil
 		}))
 
-	go http.ListenAndServe("localhost:"+strconv.Itoa(port), http.HandlerFunc(peers.ServeHTTP))
+	go http.ListenAndServe(http_addr, http.HandlerFunc(peers.ServeHTTP))
 }
