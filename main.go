@@ -8,6 +8,7 @@ import (
     "github.com/ssoor/groupcache"
     "github.com/ssoor/youniverse/log"
     "github.com/ssoor/youniverse/backend"
+    "github.com/ssoor/youniverse/homelock"
 )
 
 func main() {
@@ -28,9 +29,7 @@ func main() {
     
     var cache = groupcache.NewGroup("resource",64 << 20,groupcache.GetterFunc(
         func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
-            result := client.Get(key)
-            log.Info.Printf("asking for %s from dbserver\n", key)
-            dest.SetBytes([]byte(result))
+            dest.SetBytes([]byte(client.Get(key)))
             return nil
         }))
     
@@ -40,6 +39,7 @@ func main() {
     
     cache.Get(nil,"test",groupcache.AllocatingByteSliceSink(&data))
     
+    homelock.StartHomelock("default",false)
     
     log.Info.Println(string(data))
     
