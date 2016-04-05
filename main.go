@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -73,7 +74,7 @@ var (
 	ErrorNotValidAddress = errors.New("Not a valid link address")
 )
 
-func getConnectIP(connType string,connHost string) (ip string, err error) { //Get ip
+func getConnectIP(connType string, connHost string) (ip string, err error) { //Get ip
 	conn, err := net.Dial(connType, connHost)
 	if err != nil {
 		return ip, err
@@ -112,28 +113,50 @@ func main() {
 	}
 
 	log.Info.Println("[MAIN] Start youniverse module:")
-	connInternalIP, err := getConnectIP("tcp","www.baidu.com:80")
+	connInternalIP, err := getConnectIP("tcp", "www.baidu.com:80")
 
 	if err != nil {
 		log.Error.Printf("Query connection ip failed: %s\n", err)
 		return
 	}
-    
+
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
 		log.Error.Printf("Youniverse start failed: %s\n", err)
-        return
+		return
 	}
-    
-    var data []byte
-    
-    if err = youniverse.Get(nil,"CMDRedirect.dll",&data); nil != err{
+
+	var data []byte
+
+	if err = youniverse.Get(nil, "CMDRedirect.dll", &data); nil != err {
 		log.Error.Printf("Resource download failed: %s\n", err)
-        return
-    }
+		return
+	}
+
+	log.Info.Println("Gets: ", youniverse.Resource.Stats.Gets.String())
+	log.Info.Println("Load: ", youniverse.Resource.Stats.Loads.String())
+	log.Info.Println("PeerLoad: ", youniverse.Resource.Stats.PeerLoads.String())
+	log.Info.Println("PeerError: ", youniverse.Resource.Stats.PeerErrors.String())
+	log.Info.Println("LocalLoad: ", youniverse.Resource.Stats.LocalLoads.String())
+
+	file, err := os.Create("CMDRedirect.dll")
+
+	if nil != err {
+		log.Error.Printf("Resource save failed: %s\n", err)
+		return
+	}
+
+	defer file.Close()
     
-    log.Info.Println("test:",data)
-    return
+    writeSize,err := file.Write(data)
+
+	if nil != err {
+		log.Error.Printf("Resource save failed: %s\n", err)
+		return
+	}
+
+	log.Info.Println("test:", writeSize)
+	return
 
 	log.Info.Println("[MAIN] Start homelock module:")
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {

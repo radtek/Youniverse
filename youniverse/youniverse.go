@@ -10,18 +10,18 @@ import (
 	"github.com/ssoor/youniverse/log"
 )
 
-var cache *groupcache.Group
+var Resource *groupcache.Group
 
 var (
     ErrorYouniverseUninit = errors.New("youniverse not initialization")
 )
 
 func Get(ctx groupcache.Context, key string, dest *[]byte) error {
-    if nil == cache{
+    if nil == Resource{
         return ErrorYouniverseUninit
     }
     
-    return cache.Get(ctx,key,groupcache.AllocatingByteSliceSink(dest))
+    return Resource.Get(ctx,key,groupcache.AllocatingByteSliceSink(dest))
 }
 
 func getPeers(guid string, peer_addr string) ([]string, error) {
@@ -59,7 +59,7 @@ func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 	client := NewBackend(setting.ResourceURLs)
 	log.Info.Println("Set Youiverse backend interfase:", setting.ResourceURLs)
 
-	cache = groupcache.NewGroup("resource", setting.MaxSize, groupcache.GetterFunc(
+	Resource = groupcache.NewGroup("resource", setting.MaxSize, groupcache.GetterFunc(
 		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
 			dest.SetBytes([]byte(client.Get(key)))
 			return nil
