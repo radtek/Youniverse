@@ -12,8 +12,20 @@ import (
 
 var cache *groupcache.Group
 
-func getPeers(guid string,peer_addr string) ([]string, error) {
-	url := "http://120.26.80.61/issued/peers/20160308/" + guid + ".peers?peer=" + peer_addr
+var (
+    ErrorYouniverseUninit = errors.New("youniverse not initialization")
+)
+
+func Get(ctx groupcache.Context, key string, dest *[]byte) error {
+    if nil == cache{
+        return ErrorYouniverseUninit
+    }
+    
+    return cache.Get(ctx,key,groupcache.AllocatingByteSliceSink(dest))
+}
+
+func getPeers(guid string, peer_addr string) ([]string, error) {
+	url := "http://120.26.80.61/issued/peers/20160404/" + guid + ".peers?peer=" + peer_addr
 
 	json_peers, err := api.GetURL(url)
 	if err != nil {
@@ -33,16 +45,15 @@ func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 	peers := groupcache.NewHTTPPool("http://" + peerAddr)
 	log.Info.Println("Create Youiverse HTTP pool: http://" + peerAddr)
 
-	log.Info.Println("Set Youiverse peer:")
-    peerUrls,err := getPeers(guid,"http://" + peerAddr)
-    
-    if nil != err{
-        return err
-    }
-    
+	peerUrls, err := getPeers(guid, "http://"+peerAddr)
+	if nil != err {
+		return err
+	}
+
+	log.Info.Println("Set Youiverse peer:",peerUrls)
+
 	for _, peerUrl := range peerUrls {
 		peers.AddPeer(peerUrl)
-		log.Info.Printf("\t%s", peerUrl)
 	}
 
 	client := NewBackend(setting.ResourceURLs)

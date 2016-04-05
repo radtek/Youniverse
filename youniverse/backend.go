@@ -19,7 +19,7 @@ func NewBackend(base []string) Backend {
 	}
 }
 
-func (b *Backend) Get(key string) string {
+func (b *Backend) Get(key string) []byte {
 	var data []byte
 
 	for _, baseURL := range b.baseURLs {
@@ -31,7 +31,7 @@ func (b *Backend) Get(key string) string {
 
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Warning.Printf("%s", err)
+			log.Warning.Printf("Backend download resource failed, interface result stats: %u", resp.StatusCode)
 			continue
 		}
 
@@ -44,5 +44,5 @@ func (b *Backend) Get(key string) string {
 		break
 	}
 
-	return string(data)
+	return data
 }

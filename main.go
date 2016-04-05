@@ -121,8 +121,19 @@ func main() {
     
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
-		log.Warning.Printf("\tStart failed: %s\n", err)
+		log.Error.Printf("Youniverse start failed: %s\n", err)
+        return
 	}
+    
+    var data []byte
+    
+    if err = youniverse.Get(nil,"CMDRedirect.dll",&data); nil != err{
+		log.Error.Printf("Resource download failed: %s\n", err)
+        return
+    }
+    
+    log.Info.Println("test:",data)
+    return
 
 	log.Info.Println("[MAIN] Start homelock module:")
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
