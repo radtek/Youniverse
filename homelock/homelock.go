@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/homelock/socksd"
 	"github.com/ssoor/youniverse/log"
 )
@@ -21,6 +22,35 @@ var (
 	ErrorSettingUnmarshal error = errors.New("unmarshal setting failed")
 )
 
+func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
+	waitTime := float32(1)
+
+	router := socksd.BuildUpstreamRouter(proxie)
+
+	for {
+		if encode {
+			socksd.StartEncodeHTTPProxy(proxie, router, []byte(srules))
+		} else {
+			socksd.StartHTTPProxy(proxie, router, []byte(srules))
+		}
+		waitTime += waitTime * 0.618
+		log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		time.Sleep(time.Duration(waitTime) * time.Second)
+	}
+}
+
+func runPACServer(pac *socksd.PAC) {
+	waitTime := float32(1)
+
+	for {
+		socksd.StartPACServer(*pac)
+		waitTime += waitTime * 0.618
+		log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		time.Sleep(time.Duration(waitTime) * time.Second)
+	}
+}
+
+
 func StartHomelock(guid string, setting Settings) error {
 
 	log.Info.Printf("Set messenger GUID: %s\n", guid)
@@ -29,29 +59,41 @@ func StartHomelock(guid string, setting Settings) error {
 		log.Info.Printf("Setting messenger server information: %s\n", upstream.Address)
 	}
 
-	pac_addr := "127.0.0.1:" + strconv.FormatUint(uint64(PACListenPort), 10)
+	proxie,err := CreateSocksdProxy(guid,setting.Services)
 
-	socksd_config, err := CreateSocksConfig(pac_addr, setting.Services, guid)
 	if err != nil {
-		log.Error.Printf("Create messenger config failed, err: %s\n", err)
+		log.Error.Printf("Create messenger angel config failed, err: %s\n", err)
+		return ErrorSocksdCreate
+	}
+    
+	log.Info.Println("Creating an internal server:")
+
+	log.Info.Printf("\tHTTP Protocol: %s\n", proxie.HTTP)
+	log.Info.Printf("\tSOCKS5 Protocol: %s\n",proxie.SOCKS5)
+    
+	for _, upstream := range proxie.Upstreams {
+		log.Info.Printf("Setting messenger server information: %s\n", upstream.Address)
+	}
+
+	url := "http://120.26.80.61/issued/rules/20160308/" + guid + ".rules"
+
+	srules, err := api.GetURL(url)
+	if err != nil {
+		log.Error.Printf("Query srules: %s failed, err: %s\n", url, err)
 		return ErrorSocksdCreate
 	}
 
-	log.Info.Println("Creating an internal server:")
+	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
+    
+	pac_addr := "127.0.0.1:" + strconv.FormatUint(uint64(PACListenPort), 10)
+	pac, err := CreateSocksdPAC(guid, pac_addr, proxie,socksd.Upstream{})
 
-	log.Info.Printf("\tHTTP Protocol: %s\n", socksd_config.Proxies[0].HTTP)
-	log.Info.Printf("\tSOCKS5 Protocol: %s\n", socksd_config.Proxies[0].SOCKS5)
-
-	go func() {
-		waitTime := float32(1)
-
-		for {
-			socksd.StartSocksd(guid, setting.Encode, socksd_config)
-			waitTime += waitTime * 0.618
-			log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
-			time.Sleep(time.Duration(waitTime) * time.Second)
-		}
-	}()
+	if err != nil {
+		log.Error.Printf("Create messenger pac config failed, err: %s\n", err)
+		return ErrorSocksdCreate
+	}
+    
+	go runPACServer(pac)
 
 	pac_url := "http://" + pac_addr + "/proxy.pac"
 
@@ -59,7 +101,7 @@ func StartHomelock(guid string, setting Settings) error {
 	log.Info.Printf("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
 
 	if setting.Encode {
-		listenHTTP := socksd_config.Proxies[0].HTTP
+		listenHTTP := pac.Rules[0].Proxy
 		encodeport, err := strconv.ParseUint(listenHTTP[strings.LastIndexByte(listenHTTP, ':')+1:], 10, 16)
 		if err != nil {
 			log.Warning.Printf("Parse encode port failed, err: %s\n", err)

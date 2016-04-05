@@ -4,15 +4,15 @@ import (
 	"errors"
 	"net"
 	"strconv"
-    
-    . "github.com/ssoor/youniverse/homelock/socksd"
+
+	. "github.com/ssoor/youniverse/homelock/socksd"
 )
 
 var (
 	ErrorSocketUnavailable error = errors.New("socket port not find")
 )
 
-func SocketSelectPort(port_type string, port_base int) (int,error) {
+func SocketSelectPort(port_type string, port_base int) (int, error) {
 
 	for ; port_base < 65536; port_base++ {
 
@@ -20,64 +20,54 @@ func SocketSelectPort(port_type string, port_base int) (int,error) {
 
 		if err == nil {
 			tcpListener.Close()
-			return port_base,nil
+			return port_base, nil
 		}
 	}
-    
+
 	return 0, ErrorSocketUnavailable
 }
 
-func createSocksPACRule(userGUID string) (*PACRule, error) {
-	portHttp,_ := SocketSelectPort("tcp", 60000)
-	portSocket5,_ := SocketSelectPort("tcp", portHttp+1)
+func CreateSocksdProxy(userGUID string, upstream []Upstream) (Proxy, error) {
+	portHttp, _ := SocketSelectPort("tcp", 60000)
+	portSocket4, _ := SocketSelectPort("tcp", portHttp+1)
+	portSocket5, _ := SocketSelectPort("tcp", portSocket4+1)
+
+	if 0 == portHttp || 0 == portSocket5 {
+		return Proxy{}, ErrorSocketUnavailable
+	}
+
+	proxy := Proxy{
+		HTTP:      ":" + strconv.Itoa(portHttp),
+		SOCKS4:    ":" + strconv.Itoa(portSocket4),
+		SOCKS5:    ":" + strconv.Itoa(portSocket5),
+		Upstreams: upstream,
+	}
+
+	return proxy, nil
+}
+
+func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream) (*PAC, error) {
+	portHttp, _ := SocketSelectPort("tcp", 60000)
+	portSocket5, _ := SocketSelectPort("tcp", portHttp+1)
 
 	if 0 == portHttp || 0 == portSocket5 {
 		return nil, ErrorSocketUnavailable
 	}
 
-	rule := &PACRule{
-		Name:   "default_proxy",
-		Proxy:  "127.0.0.1:" + strconv.Itoa(portHttp),
-		SOCKS5: "127.0.0.1:" + strconv.Itoa(portSocket5),
-		//LocalRules: "default_rules.txt",
-		RemoteRules: "http://120.26.80.61/issued/bricks/20160308/" + userGUID + ".bricks",
+	pac := &PAC{
+		Address:  addr,
+		Upstream: upstream,
+		Rules: []PACRule{
+			{
+				Name:   "default_proxy",
+				Proxy:  proxie.HTTP,
+				SOCKS5: proxie.SOCKS5,
+				//LocalRules: "default_rules.txt",
+				RemoteRules: "http://120.26.80.61/issued/bricks/20160308/" + guid + ".bricks",
+			},
+		},
 	}
 
-	return rule, nil
+	return pac, nil
 }
 
-var (
-	ErrorUpstreamUnknown error = errors.New("Upstream is nil")
-)
-
-func CreateSocksConfig(pacAddress string, upstreams []Upstream, userGUID string) (*Config, error) {
-
-	if len(upstreams) < 1 {
-		return nil, ErrorUpstreamUnknown
-	}
-
-	var config Config
-
-	config.Proxies = []Proxy{}
-
-	config.PAC.Rules = []PACRule{}
-	config.PAC.Address = pacAddress
-	//config.PAC.Upstream = upstreams[0]
-
-	rule, err := createSocksPACRule(userGUID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	proxie := Proxy{
-		HTTP:      rule.Proxy,
-		SOCKS5:    rule.SOCKS5,
-		Upstreams: upstreams,
-	}
-
-	config.Proxies = append(config.Proxies, proxie)
-	config.PAC.Rules = append(config.PAC.Rules, *rule)
-
-	return &config, nil
-}
