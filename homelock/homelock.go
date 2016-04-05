@@ -1,13 +1,11 @@
 package homelock
 
 import (
-	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
-    "errors"
 	"time"
 
-	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/homelock/socksd"
 	"github.com/ssoor/youniverse/log"
 )
@@ -16,33 +14,16 @@ const (
 	PACListenPort uint16 = 44366
 )
 
-type JSONSettings struct {
-	Services []socksd.Upstream `json:"services"`
-}
-
 var (
-	ErrorSettingQuery error = errors.New("query setting failed")
-	ErrorSocksdCreate error = errors.New("create socksd failed")
-	ErrorEncodeUnmarshal error = errors.New("unmarshal encode failed")
+	ErrorSettingQuery     error = errors.New("query setting failed")
+	ErrorSocksdCreate     error = errors.New("create socksd failed")
+	ErrorEncodeUnmarshal  error = errors.New("unmarshal encode failed")
 	ErrorSettingUnmarshal error = errors.New("unmarshal setting failed")
 )
 
-func StartHomelock(guid string, encode bool) error {
+func StartHomelock(guid string, setting Settings) error {
 
 	log.Info.Printf("Set messenger GUID: %s\n", guid)
-	url := "http://120.26.80.61/issued/settings/20160308/" + guid + ".settings"
-
-	json_setting, err := api.GetURL(url)
-	if err != nil {
-		log.Error.Printf("Load setting: %s failed, err: %s\n", url, err)
-		return ErrorSettingQuery
-	}
-
-	setting := JSONSettings{}
-	if err = json.Unmarshal([]byte(json_setting), &setting); err != nil {
-		log.Error.Printf("Load setting: %s failed, err: %s\n", url, err)
-		return ErrorSettingUnmarshal
-	}
 
 	for _, upstream := range setting.Services {
 		log.Info.Printf("Setting messenger server information: %s\n", upstream.Address)
@@ -65,7 +46,7 @@ func StartHomelock(guid string, encode bool) error {
 		waitTime := float32(1)
 
 		for {
-			socksd.StartSocksd(guid, encode, socksd_config)
+			socksd.StartSocksd(guid, setting.Encode, socksd_config)
 			waitTime += waitTime * 0.618
 			log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 			time.Sleep(time.Duration(waitTime) * time.Second)
@@ -75,9 +56,9 @@ func StartHomelock(guid string, encode bool) error {
 	pac_url := "http://" + pac_addr + "/proxy.pac"
 
 	isOK := SetPACProxy(pac_url)
-	log.Info.Printf("Setting system browser pac information: %s, stats %u\n", pac_url, isOK)
+	log.Info.Printf("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
 
-	if encode {
+	if setting.Encode {
 		listenHTTP := socksd_config.Proxies[0].HTTP
 		encodeport, err := strconv.ParseUint(listenHTTP[strings.LastIndexByte(listenHTTP, ':')+1:], 10, 16)
 		if err != nil {
@@ -92,6 +73,6 @@ func StartHomelock(guid string, encode bool) error {
 		handle := SetBusinessData(pac_sockaddr, encode_sockaddr)
 		log.Info.Printf("Setting business data %s - %s, share handle: %d\n", pac_sockaddr, encode_sockaddr, handle)
 	}
-    
-    return nil
+
+	return nil
 }

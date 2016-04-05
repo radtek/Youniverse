@@ -1,65 +1,60 @@
 package youniverse
 
 import (
+	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
-	"strconv"
 
 	"github.com/ssoor/groupcache"
+	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/log"
 )
 
 var cache *groupcache.Group
 
-var (
-	ErrorSocketUnavailable error = errors.New("socket port not find")
-)
+func getPeers(guid string,peer_addr string) ([]string, error) {
+	url := "http://120.26.80.61/issued/peers/20160308/" + guid + ".peers?peer=" + peer_addr
 
-func SocketSelectPort(port_type string, port_base int) (int16, error) {
-
-	for ; port_base < 65536; port_base++ {
-
-		tcpListener, err := net.Listen(port_type, ":"+strconv.Itoa(port_base))
-
-		if err == nil {
-			tcpListener.Close()
-			return int16(port_base), nil
-		}
+	json_peers, err := api.GetURL(url)
+	if err != nil {
+		return []string{}, errors.New("Query peers interface failed.")
 	}
 
-	return 0, ErrorSocketUnavailable
+	peers := []string{}
+	if err = json.Unmarshal([]byte(json_peers), &peers); err != nil {
+		return []string{}, errors.New("Unmarshal peers interface failed.")
+	}
+
+	return peers, nil
 }
 
-func StartYouniverse(port int16, max_size int64, peer_urls []string) error {
-	port, err := SocketSelectPort("tcp", int(port))
+func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 
-	if err != nil {
-		return err
-	}
-
-	http_addr := "localhost:" + strconv.Itoa(int(port))
-	backendURLs := []string{"http://localhost/youniverse/resource/"}
-
-	peers := groupcache.NewHTTPPool("http://" + http_addr)
-	log.Info.Println("Create Youiverse HTTP pool: http://" + http_addr)
+	peers := groupcache.NewHTTPPool("http://" + peerAddr)
+	log.Info.Println("Create Youiverse HTTP pool: http://" + peerAddr)
 
 	log.Info.Println("Set Youiverse peer:")
-	for _, peer_url := range peer_urls {
-		peers.AddPeer(peer_url)
-		log.Info.Printf("\t%s", peer_url)
+    peerUrls,err := getPeers(guid,peerAddr)
+    
+    if nil != err{
+        return err
+    }
+    
+	for _, peerUrl := range peerUrls {
+		peers.AddPeer(peerUrl)
+		log.Info.Printf("\t%s", peerUrl)
 	}
 
-	client := NewBackend(backendURLs)
-	log.Info.Println("Set Youiverse backend interfase:", backendURLs)
+	client := NewBackend(setting.ResourceURLs)
+	log.Info.Println("Set Youiverse backend interfase:", setting.ResourceURLs)
 
-	cache = groupcache.NewGroup("resource", max_size, groupcache.GetterFunc(
+	cache = groupcache.NewGroup("resource", setting.MaxSize, groupcache.GetterFunc(
 		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
 			dest.SetBytes([]byte(client.Get(key)))
 			return nil
 		}))
 
-	go http.ListenAndServe(http_addr, http.HandlerFunc(peers.ServeHTTP))
-    
-    return nil
+	go http.ListenAndServe(peerAddr, http.HandlerFunc(peers.ServeHTTP))
+
+	return nil
 }
