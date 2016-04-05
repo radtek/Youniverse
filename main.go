@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -91,6 +92,31 @@ func getConnectIP(connType string, connHost string) (ip string, err error) { //G
 	return strSplit[0], nil
 }
 
+func downloadResourceToFile(resourceKey string, fileName string) (int, error) {
+
+	var data []byte
+
+	if err := youniverse.Get(nil, resourceKey, &data); nil != err {
+		return 0, errors.New(fmt.Sprintln(resourceKey, "download failed:", err))
+	}
+
+	file, err := os.Create(fileName)
+
+	if nil != err {
+		return 0, errors.New(fmt.Sprintln(resourceKey, "create failed:", err))
+	}
+
+	defer file.Close()
+
+	writeSize, err := file.Write(data)
+
+	if nil != err {
+		return 0, errors.New(fmt.Sprintln(resourceKey, "save failed:", err))
+	}
+
+	return writeSize, nil
+}
+
 func main() {
 	var guid string
 
@@ -126,37 +152,21 @@ func main() {
 		return
 	}
 
-	var data []byte
-
-	if err = youniverse.Get(nil, "CMDRedirect.dll", &data); nil != err {
-		log.Error.Printf("Resource download failed: %s\n", err)
-		return
-	}
-
-	log.Info.Println("Gets: ", youniverse.Resource.Stats.Gets.String())
-	log.Info.Println("Load: ", youniverse.Resource.Stats.Loads.String())
-	log.Info.Println("PeerLoad: ", youniverse.Resource.Stats.PeerLoads.String())
-	log.Info.Println("PeerError: ", youniverse.Resource.Stats.PeerErrors.String())
-	log.Info.Println("LocalLoad: ", youniverse.Resource.Stats.LocalLoads.String())
-
-	file, err := os.Create("CMDRedirect.dll")
+	fileSize, err := downloadResourceToFile("CMDRedirect.dll", "CMDRedirect.dll")
 
 	if nil != err {
-		log.Error.Printf("Resource save failed: %s\n", err)
+		log.Error.Printf("Resource Download failed: %s\n", err)
 		return
+	} else {
+		log.Info.Println("Download CMDRedirect.dll success, resource size is", fileSize)
 	}
 
-	defer file.Close()
+	log.Info.Println("Youniverse stats info:")
     
-    writeSize,err := file.Write(data)
-
-	if nil != err {
-		log.Error.Printf("Resource save failed: %s\n", err)
-		return
-	}
-
-	log.Info.Println("test:", writeSize)
-	return
+	log.Info.Println("\tGET : ", youniverse.Resource.Stats.Gets.String());
+	log.Info.Println("\tLOAD : ", youniverse.Resource.Stats.Loads.String(),"\tHIT  : ", youniverse.Resource.Stats.CacheHits.String())
+	log.Info.Println("\tPEER : ", youniverse.Resource.Stats.PeerLoads.String(), "\tERROR: ", youniverse.Resource.Stats.PeerErrors.String())
+	log.Info.Println("\tLOCAL: ", youniverse.Resource.Stats.LocalLoads.String(), "\tERROR: ",youniverse.Resource.Stats.LocalLoadErrs.String())
 
 	log.Info.Println("[MAIN] Start homelock module:")
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
