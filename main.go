@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/homelock"
@@ -36,7 +37,7 @@ func SocketSelectPort(port_type string, port_base int) (int16, error) {
 	return 0, ErrorSocketUnavailable
 }
 
-func getStartSettings(guid string) (config Config,err error) {
+func getStartSettings(guid string) (config Config, err error) {
 
 	url := "http://120.26.80.61/issued/settings/20160404/" + guid + ".settings"
 
@@ -48,8 +49,45 @@ func getStartSettings(guid string) (config Config,err error) {
 	if err = json.Unmarshal([]byte(json_config), &config); err != nil {
 		return config, errors.New("Unmarshal setting interface failed.")
 	}
-    
-    return config,nil
+
+	return config, nil
+}
+func getInternalIPs() (ips []string, err error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ips, err
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ips = append(ips, ipnet.IP.String())
+			}
+		}
+	}
+
+	return ips, nil
+}
+
+var (
+	ErrorNotValidAddress = errors.New("Not a valid link address")
+)
+
+func getConnectIP(connType string,connHost string) (ip string, err error) { //Get ip
+	conn, err := net.Dial(connType, connHost)
+	if err != nil {
+		return ip, err
+	}
+
+	defer conn.Close()
+
+	strSplit := strings.Split(conn.LocalAddr().String(), ":")
+
+	if len(strSplit) < 2 {
+		return ip, ErrorNotValidAddress
+	}
+
+	return strSplit[0], nil
 }
 
 func main() {
@@ -57,29 +95,36 @@ func main() {
 
 	flag.StringVar(&guid, "guid", "00000000_00000000", "user unique identifier,used to obtain user configuration")
 
-	flag.Parsed()
+	flag.Parse()
 
 	port, err := SocketSelectPort("tcp", int(YouniverseListenPort))
 
 	if err != nil {
-        log.Error.Printf("Select youniverse listen port failed: %s\n",err)
+		log.Error.Printf("Select youniverse listen port failed: %s\n", err)
 		return
 	}
-    
-    config,err := getStartSettings(guid)
+
+	config, err := getStartSettings(guid)
 
 	if err != nil {
-        log.Error.Printf("Request start settings failed: %s\n",err)
+		log.Error.Printf("Request start settings failed: %s\n", err)
 		return
 	}
 
 	log.Info.Println("[MAIN] Start youniverse module:")
-	if err := youniverse.StartYouniverse(guid, "localhost:" + strconv.Itoa(int(port)), config.Youniverse); err != nil {
+	connInternalIP, err := getConnectIP("tcp","www.baidu.com:80")
+
+	if err != nil {
+		log.Error.Printf("Query connection ip failed: %s\n", err)
+		return
+	}
+    
+	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
+	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
 		log.Warning.Printf("\tStart failed: %s\n", err)
 	}
 
 	log.Info.Println("[MAIN] Start homelock module:")
-
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
 		log.Warning.Printf("\tStart failed: %s\n", err)
 	}
@@ -90,7 +135,6 @@ func main() {
 	<-ch
 
 	log.Info.Println("[MAIN] Process is exit")
-    
 
 	//cache.Get(nil,"test",groupcache.AllocatingByteSliceSink(&data))
 }

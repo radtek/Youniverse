@@ -34,7 +34,7 @@ func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 	log.Info.Println("Create Youiverse HTTP pool: http://" + peerAddr)
 
 	log.Info.Println("Set Youiverse peer:")
-    peerUrls,err := getPeers(guid,peerAddr)
+    peerUrls,err := getPeers(guid,"http://" + peerAddr)
     
     if nil != err{
         return err
