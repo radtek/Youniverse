@@ -127,58 +127,58 @@ func main() {
 	port, err := SocketSelectPort("tcp", int(YouniverseListenPort))
 
 	if err != nil {
-		log.Error.Printf("Select youniverse listen port failed: %s\n", err)
+		log.Error("Select youniverse listen port failed:", err)
 		return
 	}
 
 	config, err := getStartSettings(guid)
 
 	if err != nil {
-		log.Error.Printf("Request start settings failed: %s\n", err)
+		log.Error("Request start settings failed:", err)
 		return
 	}
 
-	log.Info.Println("[MAIN] Start youniverse module:")
+	log.Info("[MAIN] Start youniverse module:")
 	connInternalIP, err := getConnectIP("tcp", "www.baidu.com:80")
 
 	if err != nil {
-		log.Error.Printf("Query connection ip failed: %s\n", err)
+		log.Error("Query connection ip failed:", err)
 		return
 	}
 
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
-		log.Error.Printf("Youniverse start failed: %s\n", err)
+		log.Error("Youniverse start failed:", err)
 		return
 	}
 
 	fileSize, err := downloadResourceToFile("CMDRedirect.dll", "CMDRedirect.dll")
 
 	if nil != err {
-		log.Error.Printf("Resource Download failed: %s\n", err)
+		log.Error("Resource Download failed:", err)
 		return
 	} else {
-		log.Info.Println("Download CMDRedirect.dll success, resource size is", fileSize)
+		log.Info("Download CMDRedirect.dll success, resource size is", fileSize)
 	}
 
-	log.Info.Println("Youniverse stats info:")
+	log.Info("Youniverse stats info:")
     
-	log.Info.Println("\tGET : ", youniverse.Resource.Stats.Gets.String());
-	log.Info.Println("\tLOAD : ", youniverse.Resource.Stats.Loads.String(),"\tHIT  : ", youniverse.Resource.Stats.CacheHits.String())
-	log.Info.Println("\tPEER : ", youniverse.Resource.Stats.PeerLoads.String(), "\tERROR: ", youniverse.Resource.Stats.PeerErrors.String())
-	log.Info.Println("\tLOCAL: ", youniverse.Resource.Stats.LocalLoads.String(), "\tERROR: ",youniverse.Resource.Stats.LocalLoadErrs.String())
+	log.Info("\tGET : ", youniverse.Resource.Stats.Gets.String());
+	log.Info("\tLOAD : ", youniverse.Resource.Stats.Loads.String(),"\tHIT  : ", youniverse.Resource.Stats.CacheHits.String())
+	log.Info("\tPEER : ", youniverse.Resource.Stats.PeerLoads.String(), "\tERROR: ", youniverse.Resource.Stats.PeerErrors.String())
+	log.Info("\tLOCAL: ", youniverse.Resource.Stats.LocalLoads.String(), "\tERROR: ",youniverse.Resource.Stats.LocalLoadErrs.String())
 
-	log.Info.Println("[MAIN] Start homelock module:")
+	log.Info("[MAIN] Start homelock module:")
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
-		log.Warning.Printf("\tStart failed: %s\n", err)
+		log.Warning("\tStart failed:", err)
 	}
 
-	log.Info.Println("[MAIN] Module start end")
+	log.Info("[MAIN] Module start end")
 
 	ch := make(chan int, 4)
 	<-ch
 
-	log.Info.Println("[MAIN] Process is exit")
+	log.Info("[MAIN] Process is exit")
 
 	//cache.Get(nil,"test",groupcache.AllocatingByteSliceSink(&data))
 }

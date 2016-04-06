@@ -3,6 +3,7 @@ package youniverse
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -22,6 +23,8 @@ func Get(ctx groupcache.Context, key string, dest *[]byte) error {
 	if nil == Resource {
 		return ErrorYouniverseUninit
 	}
+
+	defer log.TimeoutWarning(fmt.Sprint("Youniverse get resource ", key), time.Now(), 5)
 
 	return Resource.Get(ctx, key, groupcache.AllocatingByteSliceSink(dest))
 }
@@ -69,21 +72,21 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 
 	peers := groupcache.NewHTTPPoolOpts("http://"+peerAddr, GCHTTPPoolOptions)
-	log.Info.Println("Create Youiverse HTTP pool: http://" + peerAddr)
+	log.Info("Create Youiverse HTTP pool: http://" + peerAddr)
 
 	peerUrls, err := getPeers(guid, "http://"+peerAddr)
 	if nil != err {
 		return err
 	}
 
-	log.Info.Println("Set Youiverse peer:", peerUrls)
+	log.Info("Set Youiverse peer:", len(peerUrls), peerUrls)
 
 	for _, peerUrl := range peerUrls {
 		peers.AddPeer(peerUrl)
 	}
 
 	client := NewBackend(setting.ResourceURLs)
-	log.Info.Println("Set Youiverse backend interfase:", setting.ResourceURLs)
+	log.Info("Set Youiverse backend interfase:", setting.ResourceURLs)
 
 	Resource = groupcache.NewGroup("resource", setting.MaxSize, groupcache.GetterFunc(
 		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {

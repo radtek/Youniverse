@@ -34,7 +34,7 @@ func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
 			socksd.StartHTTPProxy(proxie, router, []byte(srules))
 		}
 		waitTime += waitTime * 0.618
-		log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		log.Warning("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
 	}
 }
@@ -45,7 +45,7 @@ func runPACServer(pac *socksd.PAC) {
 	for {
 		socksd.StartPACServer(*pac)
 		waitTime += waitTime * 0.618
-		log.Warning.Println("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		log.Warning("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
 	}
 }
@@ -53,33 +53,30 @@ func runPACServer(pac *socksd.PAC) {
 
 func StartHomelock(guid string, setting Settings) error {
 
-	log.Info.Printf("Set messenger GUID: %s\n", guid)
-
-	for _, upstream := range setting.Services {
-		log.Info.Printf("Setting messenger server information: %s\n", upstream.Address)
-	}
+	log.Info("Set messenger encode mode:", setting.Encode)
+	log.Info("Set messenger account unique identifier:", guid)
 
 	proxie,err := CreateSocksdProxy(guid,setting.Services)
 
 	if err != nil {
-		log.Error.Printf("Create messenger angel config failed, err: %s\n", err)
+		log.Error("Create messenger angel config failed, err:", err)
 		return ErrorSocksdCreate
 	}
     
-	log.Info.Println("Creating an internal server:")
+	log.Info("Creating an internal server:")
 
-	log.Info.Printf("\tHTTP Protocol: %s\n", proxie.HTTP)
-	log.Info.Printf("\tSOCKS5 Protocol: %s\n",proxie.SOCKS5)
+	log.Info("\tHTTP Protocol:", proxie.HTTP)
+	log.Info("\tSOCKS5 Protocol:",proxie.SOCKS5)
     
 	for _, upstream := range proxie.Upstreams {
-		log.Info.Printf("Setting messenger server information: %s\n", upstream.Address)
+		log.Info("Setting messenger server information:", upstream.Address)
 	}
 
 	url := "http://120.26.80.61/issued/rules/20160308/" + guid + ".rules"
 
 	srules, err := api.GetURL(url)
 	if err != nil {
-		log.Error.Printf("Query srules: %s failed, err: %s\n", url, err)
+		log.Errorf("Query srules: %s failed, err: %s\n", url, err)
 		return ErrorSocksdCreate
 	}
 
@@ -89,7 +86,7 @@ func StartHomelock(guid string, setting Settings) error {
 	pac, err := CreateSocksdPAC(guid, pac_addr, proxie,socksd.Upstream{})
 
 	if err != nil {
-		log.Error.Printf("Create messenger pac config failed, err: %s\n", err)
+		log.Error("Create messenger pac config failed, err:", err)
 		return ErrorSocksdCreate
 	}
     
@@ -98,13 +95,13 @@ func StartHomelock(guid string, setting Settings) error {
 	pac_url := "http://" + pac_addr + "/proxy.pac"
 
 	isOK := SetPACProxy(pac_url)
-	log.Info.Printf("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
+	log.Infof("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
 
 	if setting.Encode {
 		listenHTTP := pac.Rules[0].Proxy
 		encodeport, err := strconv.ParseUint(listenHTTP[strings.LastIndexByte(listenHTTP, ':')+1:], 10, 16)
 		if err != nil {
-			log.Warning.Printf("Parse encode port failed, err: %s\n", err)
+			log.Warning("Parse encode port failed, err:", err)
 			return ErrorEncodeUnmarshal
 		}
 
@@ -113,7 +110,7 @@ func StartHomelock(guid string, setting Settings) error {
 		encode_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
 
 		handle := SetBusinessData(pac_sockaddr, encode_sockaddr)
-		log.Info.Printf("Setting business data %s - %s, share handle: %d\n", pac_sockaddr, encode_sockaddr, handle)
+		log.Infof("Setting business data %s - %s, share handle: %d\n", pac_sockaddr, encode_sockaddr, handle)
 	}
 
 	return nil
