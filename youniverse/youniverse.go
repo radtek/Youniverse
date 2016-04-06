@@ -3,7 +3,9 @@ package youniverse
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/ssoor/groupcache"
 	"github.com/ssoor/youniverse/api"
@@ -13,15 +15,15 @@ import (
 var Resource *groupcache.Group
 
 var (
-    ErrorYouniverseUninit = errors.New("youniverse not initialization")
+	ErrorYouniverseUninit = errors.New("youniverse not initialization")
 )
 
 func Get(ctx groupcache.Context, key string, dest *[]byte) error {
-    if nil == Resource{
-        return ErrorYouniverseUninit
-    }
-    
-    return Resource.Get(ctx,key,groupcache.AllocatingByteSliceSink(dest))
+	if nil == Resource {
+		return ErrorYouniverseUninit
+	}
+
+	return Resource.Get(ctx, key, groupcache.AllocatingByteSliceSink(dest))
 }
 
 func getPeers(guid string, peer_addr string) ([]string, error) {
@@ -40,9 +42,33 @@ func getPeers(guid string, peer_addr string) ([]string, error) {
 	return peers, nil
 }
 
+// DefaultTransport is the default implementation of Transport and is
+// used by DefaultClient. It establishes network connections as needed
+// and caches them for reuse by subsequent calls. It uses HTTP proxies
+// as directed by the $HTTP_PROXY and $NO_PROXY (or $http_proxy and
+// $no_proxy) environment variables.
+// DefaultTransport is the default implementation of Transport and is
+// used by DefaultClient. It establishes network connections as needed
+// and caches them for reuse by subsequent calls. It uses HTTP proxies
+// as directed by the $HTTP_PROXY and $NO_PROXY (or $http_proxy and
+// $no_proxy) environment variables.
+var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
+	BasePath: "youniverse",
+	Transport: func(context groupcache.Context) http.RoundTripper {
+		return &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout:   3 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   3 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}
+	},
+}
+
 func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 
-	peers := groupcache.NewHTTPPool("http://" + peerAddr)
+	peers := groupcache.NewHTTPPoolOpts("http://"+peerAddr, GCHTTPPoolOptions)
 	log.Info.Println("Create Youiverse HTTP pool: http://" + peerAddr)
 
 	peerUrls, err := getPeers(guid, "http://"+peerAddr)
@@ -50,7 +76,7 @@ func StartYouniverse(guid string, peerAddr string, setting Settings) error {
 		return err
 	}
 
-	log.Info.Println("Set Youiverse peer:",peerUrls)
+	log.Info.Println("Set Youiverse peer:", peerUrls)
 
 	for _, peerUrl := range peerUrls {
 		peers.AddPeer(peerUrl)
