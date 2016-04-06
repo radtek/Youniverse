@@ -63,7 +63,7 @@ func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream) (
 				Proxy:  proxie.HTTP,
 				SOCKS5: proxie.SOCKS5,
 				//LocalRules: "default_rules.txt",
-				RemoteRules: "http://120.26.80.61/issued/bricks/20160308/" + guid + ".bricks",
+				RemoteRules: "http://younverse.ssoor.com/issued/bricks/20160308/" + guid + ".bricks",
 			},
 		},
 	}

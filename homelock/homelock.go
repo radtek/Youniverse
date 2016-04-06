@@ -72,7 +72,7 @@ func StartHomelock(guid string, setting Settings) error {
 		log.Info("Setting messenger server information:", upstream.Address)
 	}
 
-	url := "http://120.26.80.61/issued/rules/20160308/" + guid + ".rules"
+	url := "http://younverse.ssoor.com/issued/rules/20160308/" + guid + ".rules"
 
 	srules, err := api.GetURL(url)
 	if err != nil {
