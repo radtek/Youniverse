@@ -63,12 +63,13 @@ func StartFundadores(guid string, setting Settings) error {
 	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", getCurrentDirectory())
 
 	for _, resource := range setting.Resources {
-		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, os.ExpandEnv(resource.Save.X86.Path))
+		savePath := os.ExpandEnv(resource.Save.X86.Path)
+		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, savePath)
 
 		if nil != err {
 			log.Warning("Fundadores download resource failed:", err)
 		} else {
-			log.Info("Fundadores download", resource.Name, "to", resource.Save.X86.Path, "success, resource size is", fileSize)
+			log.Info("Fundadores download", resource.Name, "to", savePath, "success, resource size is", fileSize)
 		}
 	}
 
