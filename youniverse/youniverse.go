@@ -65,6 +65,7 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 			}).Dial,
 			TLSHandshakeTimeout:   3 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+            ResponseHeaderTimeout: 10 * time.Second,
 		}
 	},
 }
