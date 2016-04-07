@@ -31,7 +31,7 @@ func (b *Backend) Get(key string) []byte {
 
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Warning("Backend download resource failed, interface result stats:", resp.StatusCode)
+			log.Warning("Backend download resource",baseURL + key,"failed, interface result stats:", resp.StatusCode)
 			continue
 		}
 
