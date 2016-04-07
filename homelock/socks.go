@@ -46,7 +46,7 @@ func CreateSocksdProxy(userGUID string, upstream []Upstream) (Proxy, error) {
 	return proxy, nil
 }
 
-func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream) (*PAC, error) {
+func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream,bricksURL string) (*PAC, error) {
 	portHttp, _ := SocketSelectPort("tcp", 60000)
 	portSocket5, _ := SocketSelectPort("tcp", portHttp+1)
 
@@ -63,7 +63,7 @@ func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream) (
 				Proxy:  proxie.HTTP,
 				SOCKS5: proxie.SOCKS5,
 				//LocalRules: "default_rules.txt",
-				RemoteRules: "http://younverse.ssoor.com/issued/bricks/20160308/" + guid + ".bricks",
+				RemoteRules: bricksURL,
 			},
 		},
 	}

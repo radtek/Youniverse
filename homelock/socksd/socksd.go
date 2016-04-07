@@ -6,36 +6,8 @@ import (
 	"strings"
 
 	"github.com/ssoor/socks"
-	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/log"
 )
-
-func StartSocksd(guid string, encode bool, conf *Config) {
-	url := "http://120.26.80.61/issued/rules/20160308/" + guid + ".rules"
-
-	srules, err := api.GetURL(url)
-	if err != nil {
-		log.Error("Socksd load srules:", url, "failed, err:", err)
-		return
-	}
-    
-	log.Info("Socksd load srules:", url, "succeeded")
-
-	for _, c := range conf.Proxies {
-		router := BuildUpstreamRouter(c)
-
-		if encode {
-			go StartEncodeHTTPProxy(c, router, []byte(srules))
-		} else {
-			go StartHTTPProxy(c, router, []byte(srules))
-		}
-
-		go runSOCKS4Server(c, router)
-		go runSOCKS5Server(c, router)
-	}
-
-	StartPACServer(conf.PAC)
-}
 
 func BuildUpstream(upstream Upstream, forward socks.Dialer) (socks.Dialer, error) {
 	cipherDecorator := NewCipherConnDecorator(upstream.Crypto, upstream.Password)
@@ -83,9 +55,9 @@ func runSOCKS4Server(conf Proxy, forward socks.Dialer) {
 		}
 		cipherDecorator := NewCipherConnDecorator(conf.Crypto, conf.Password)
 		listener = NewDecorateListener(listener, cipherDecorator)
-        
+
 		defer listener.Close()
-        
+
 		socks4Svr, err := socks.NewSocks4Server(forward)
 		if err != nil {
 			log.Error("socks.NewSocks4Server failed, err:", err)
@@ -102,12 +74,12 @@ func runSOCKS5Server(conf Proxy, forward socks.Dialer) {
 			log.Error("net.Listen failed, err:", err, conf.SOCKS5)
 			return
 		}
-        
+
 		cipherDecorator := NewCipherConnDecorator(conf.Crypto, conf.Password)
 		listener = NewDecorateListener(listener, cipherDecorator)
-        
+
 		defer listener.Close()
-        
+
 		socks5Svr, err := socks.NewSocks5Server(forward)
 		if err != nil {
 			log.Error("socks.NewSocks5Server failed, err:", err)

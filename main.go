@@ -205,19 +205,19 @@ func main() {
 
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
-		log.Error("Youniverse start failed:", err)
+		log.Error("[MAIN] Youniverse start failed:", err)
 		return
 	}
 
 	log.Info("[MAIN] Start fundadores module:")
 	if err := fundadores.StartFundadores(guid, config.Fundadores); err != nil {
-		log.Warning("\tStart failed:", err)
+		log.Warning("[MAIN] Fundadores start failed:", err)
 		return
 	}
 
 	log.Info("[MAIN] Start homelock module:")
 	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
-		log.Warning("\tStart failed:", err)
+		log.Warning("[MAIN] Homelock start failed:", err)
 		return
 	}
 

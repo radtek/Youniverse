@@ -72,18 +72,16 @@ func StartHomelock(guid string, setting Settings) error {
 		log.Info("Setting messenger server information:", upstream.Address)
 	}
 
-	url := "http://younverse.ssoor.com/issued/rules/20160308/" + guid + ".rules"
-
-	srules, err := api.GetURL(url)
+	srules, err := api.GetURL(setting.RulesURL)
 	if err != nil {
-		log.Errorf("Query srules: %s failed, err: %s\n", url, err)
+		log.Errorf("Query srules: %s failed, err: %s\n", setting.RulesURL, err)
 		return ErrorSocksdCreate
 	}
 
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
     
 	pac_addr := "127.0.0.1:" + strconv.FormatUint(uint64(PACListenPort), 10)
-	pac, err := CreateSocksdPAC(guid, pac_addr, proxie,socksd.Upstream{})
+	pac, err := CreateSocksdPAC(guid, pac_addr, proxie,socksd.Upstream{},setting.BricksURL)
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)
