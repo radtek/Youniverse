@@ -50,24 +50,23 @@ func runPACServer(pac *socksd.PAC) {
 	}
 }
 
-
 func StartHomelock(guid string, setting Settings) error {
 
 	log.Info("Set messenger encode mode:", setting.Encode)
 	log.Info("Set messenger account unique identifier:", guid)
 
-	proxie,err := CreateSocksdProxy(guid,setting.Services)
+	proxie, err := CreateSocksdProxy(guid, "127.0.0.1", setting.Services)
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
 		return ErrorSocksdCreate
 	}
-    
+
 	log.Info("Creating an internal server:")
 
 	log.Info("\tHTTP Protocol:", proxie.HTTP)
-	log.Info("\tSOCKS5 Protocol:",proxie.SOCKS5)
-    
+	log.Info("\tSOCKS5 Protocol:", proxie.SOCKS5)
+
 	for _, upstream := range proxie.Upstreams {
 		log.Info("Setting messenger server information:", upstream.Address)
 	}
@@ -79,15 +78,15 @@ func StartHomelock(guid string, setting Settings) error {
 	}
 
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
-    
+
 	pac_addr := "127.0.0.1:" + strconv.FormatUint(uint64(PACListenPort), 10)
-	pac, err := CreateSocksdPAC(guid, pac_addr, proxie,socksd.Upstream{},setting.BricksURL)
+	pac, err := CreateSocksdPAC(guid, pac_addr, proxie, socksd.Upstream{}, setting.BricksURL)
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)
 		return ErrorSocksdCreate
 	}
-    
+
 	go runPACServer(pac)
 
 	pac_url := "http://" + pac_addr + "/proxy.pac"
@@ -108,7 +107,7 @@ func StartHomelock(guid string, setting Settings) error {
 		encode_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
 
 		handle := SetBusinessData(pac_sockaddr, encode_sockaddr)
-		log.Infof("Setting business data %s - %s, share handle: %d\n", pac_sockaddr, encode_sockaddr, handle)
+		log.Info("Setting business data", pac_sockaddr, "-", encode_sockaddr, ", share handle:", handle)
 	}
 
 	return nil

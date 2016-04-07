@@ -196,11 +196,11 @@ func main() {
 		log.Error("Request start settings failed:", err)
 		return
 	}
-    
-    if debug{
-        config.Homelock.Encode = false
-        log.Info("[MAIN] Current starting to debug...")
-    }
+
+	if debug {
+		config.Homelock.Encode = false
+		log.Info("[MAIN] Current starting to debug...")
+	}
 
 	log.Info("[MAIN] Start youniverse module:")
 	connInternalIP, err := getConnectIP("tcp", "www.baidu.com:80")

@@ -27,7 +27,7 @@ func SocketSelectPort(port_type string, port_base int) (int, error) {
 	return 0, ErrorSocketUnavailable
 }
 
-func CreateSocksdProxy(userGUID string, upstream []Upstream) (Proxy, error) {
+func CreateSocksdProxy(userGUID string,ipAddr string, upstream []Upstream) (Proxy, error) {
 	portHttp, _ := SocketSelectPort("tcp", 60000)
 	portSocket4, _ := SocketSelectPort("tcp", portHttp+1)
 	portSocket5, _ := SocketSelectPort("tcp", portSocket4+1)
@@ -37,9 +37,9 @@ func CreateSocksdProxy(userGUID string, upstream []Upstream) (Proxy, error) {
 	}
 
 	proxy := Proxy{
-		HTTP:      ":" + strconv.Itoa(portHttp),
-		SOCKS4:    ":" + strconv.Itoa(portSocket4),
-		SOCKS5:    ":" + strconv.Itoa(portSocket5),
+		HTTP:      ipAddr + ":" + strconv.Itoa(portHttp),
+		SOCKS4:    ipAddr + ":" + strconv.Itoa(portSocket4),
+		SOCKS5:    ipAddr + ":" + strconv.Itoa(portSocket5),
 		Upstreams: upstream,
 	}
 
