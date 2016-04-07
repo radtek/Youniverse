@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ssoor/youniverse/log"
@@ -30,7 +31,6 @@ func getCurrentDirectory() string {
 }
 
 func downloadResourceToFile(resourceKey string, checkHash string, fileName string) (int, error) {
-
 	var data []byte
 
 	if err := youniverse.Get(nil, resourceKey, &data); nil != err {
@@ -60,11 +60,10 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 }
 
 func StartFundadores(guid string, setting Settings) error {
-	log.Info("Fundadores download starting, current dir is", getCurrentDirectory())
+	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", getCurrentDirectory())
 
 	for _, resource := range setting.Resources {
-
-		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, resource.Save.X86.Path)
+		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, os.ExpandEnv(resource.Save.X86.Path))
 
 		if nil != err {
 			log.Warning("Fundadores download resource failed:", err)
