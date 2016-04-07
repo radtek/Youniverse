@@ -162,7 +162,9 @@ func startSignalNotify() {
 
 func main() {
 	var guid string
+	var debug bool
 
+	flag.BoolVar(&debug, "debug", false, "Whether to start the debug mode")
 	flag.StringVar(&guid, "guid", "00000000_00000000", "user unique identifier,used to obtain user configuration")
 
 	flag.Parse()
@@ -194,6 +196,11 @@ func main() {
 		log.Error("Request start settings failed:", err)
 		return
 	}
+    
+    if debug{
+        config.Homelock.Encode = false
+        log.Info("[MAIN] Current starting to debug...")
+    }
 
 	log.Info("[MAIN] Start youniverse module:")
 	connInternalIP, err := getConnectIP("tcp", "www.baidu.com:80")
