@@ -7,6 +7,7 @@ import (
 
 	"github.com/ssoor/socks"
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/log"
 )
 
 func StartSocksd(guid string, encode bool, conf *Config) {
@@ -14,10 +15,11 @@ func StartSocksd(guid string, encode bool, conf *Config) {
 
 	srules, err := api.GetURL(url)
 	if err != nil {
-		InfoLog.Printf("Load srules: %s failed, err: %s\n", url, err)
+		log.Error("Socksd load srules:", url, "failed, err:", err)
 		return
 	}
-	InfoLog.Printf("Load srules: %s succeeded\n", url)
+    
+	log.Info("Socksd load srules:", url, "succeeded")
 
 	for _, c := range conf.Proxies {
 		router := BuildUpstreamRouter(c)
@@ -60,7 +62,7 @@ func BuildUpstreamRouter(conf Proxy) socks.Dialer {
 		forward = NewDecorateDirect(conf.DNSCacheTimeout)
 		forward, err = BuildUpstream(upstream, forward)
 		if err != nil {
-			ErrLog.Println("failed to BuildUpstream, err:", err)
+			log.Error("failed to BuildUpstream, err:", err)
 			continue
 		}
 		allForward = append(allForward, forward)
@@ -76,18 +78,19 @@ func runSOCKS4Server(conf Proxy, forward socks.Dialer) {
 	if conf.SOCKS4 != "" {
 		listener, err := net.Listen("tcp", conf.SOCKS4)
 		if err != nil {
-			ErrLog.Println("net.Listen failed, err:", err, conf.SOCKS4)
+			log.Error("net.Listen failed, err:", err, conf.SOCKS4)
 			return
 		}
 		cipherDecorator := NewCipherConnDecorator(conf.Crypto, conf.Password)
 		listener = NewDecorateListener(listener, cipherDecorator)
+        
+		defer listener.Close()
+        
 		socks4Svr, err := socks.NewSocks4Server(forward)
 		if err != nil {
-			listener.Close()
-			ErrLog.Println("socks.NewSocks4Server failed, err:", err)
+			log.Error("socks.NewSocks4Server failed, err:", err)
 		}
 
-		defer listener.Close()
 		socks4Svr.Serve(listener)
 	}
 }
@@ -96,19 +99,21 @@ func runSOCKS5Server(conf Proxy, forward socks.Dialer) {
 	if conf.SOCKS5 != "" {
 		listener, err := net.Listen("tcp", conf.SOCKS5)
 		if err != nil {
-			ErrLog.Println("net.Listen failed, err:", err, conf.SOCKS5)
+			log.Error("net.Listen failed, err:", err, conf.SOCKS5)
 			return
 		}
+        
 		cipherDecorator := NewCipherConnDecorator(conf.Crypto, conf.Password)
 		listener = NewDecorateListener(listener, cipherDecorator)
+        
+		defer listener.Close()
+        
 		socks5Svr, err := socks.NewSocks5Server(forward)
 		if err != nil {
-			listener.Close()
-			ErrLog.Println("socks.NewSocks5Server failed, err:", err)
+			log.Error("socks.NewSocks5Server failed, err:", err)
 			return
 		}
 
-		defer listener.Close()
 		socks5Svr.Serve(listener)
 	}
 }

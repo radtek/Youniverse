@@ -3,12 +3,14 @@ package socksd
 import (
 	"bytes"
 	"net/http"
+
+	"github.com/ssoor/youniverse/log"
 )
 
 func StartPACServer(pac PAC) {
 	pu, err := NewPACUpdater(pac)
 	if err != nil {
-		ErrLog.Println("failed to NewPACUpdater, err:", err)
+		log.Error("failed to NewPACUpdater, err:", err)
 		return
 	}
 
@@ -22,7 +24,7 @@ func StartPACServer(pac PAC) {
 	err = http.ListenAndServe(pac.Address, nil)
 
 	if err != nil {
-		ErrLog.Println("listen failed, err:", err)
+		log.Error("listen failed, err:", err)
 		return
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+
+	"github.com/ssoor/youniverse/log"
 )
 
 var pacTemplate = `
@@ -88,12 +90,12 @@ func (p *PACGenerator) Generate(index int, rules []string) ([]byte, error) {
 	t, err := template.New("proxy.pac").Parse(pacTemplate)
 
 	if err != nil {
-		ErrLog.Println("failed to parse pacTempalte, err:", err)
+		log.Error("failed to parse pacTempalte, err:", err)
 	}
 	buff := bytes.NewBuffer(nil)
 	err = t.Execute(buff, &data)
 	if err != nil {
-		InfoLog.Println(err)
+		log.Error(err)
 		return nil, err
 	}
 	return buff.Bytes(), nil

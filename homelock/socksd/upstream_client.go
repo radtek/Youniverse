@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/ssoor/socks"
+	"github.com/ssoor/youniverse/log"
 )
 
 type UpstreamDialer struct {
@@ -37,7 +38,7 @@ func (u *UpstreamDialer) Dial(network, address string) (net.Conn, error) {
 	router := u.getNextDialer()
 	conn, err := router.Dial(network, address)
 	if err != nil {
-		ErrLog.Println("UpstreamDialer router.Dial failed, err:", err, network, address)
+		log.Error("UpstreamDialer router.Dial failed, err:", err, network, address)
 		return nil, err
 	}
 	return conn, nil

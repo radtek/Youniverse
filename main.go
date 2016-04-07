@@ -167,6 +167,16 @@ func main() {
 
 	flag.Parse()
 
+	logFilePath := os.Args[0] + ".log"
+	file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		log.Warning("open log file", logFilePath, "error:", err.Error())
+	}
+
+	defer file.Close()
+
+	log.SetOutputFile(file)
+
 	notifySignalExit()
 
 	go startSignalNotify()

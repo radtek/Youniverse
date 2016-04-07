@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ssoor/youniverse/log"
 	//"github.com/ssoor/socks"
 )
 
@@ -97,7 +98,7 @@ func (p *PACUpdater) backgroundUpdate() {
 			if rules, err := loadLocalRule(pac.LocalRules); err == nil {
 				if data, err := pg.Generate(pacindex, rules); err == nil {
 					p.set(data)
-					InfoLog.Println("update rules from", pac.LocalRules, "succeeded")
+					log.Info("update rules from", pac.LocalRules, "succeeded")
 				}
 			}
 
@@ -105,7 +106,7 @@ func (p *PACUpdater) backgroundUpdate() {
 				if data, err := pg.Generate(pacindex, rules); err == nil {
 					p.set(data)
 					duration = 24 * time.Hour
-					InfoLog.Println("update rules from", pac.RemoteRules, "succeeded")
+					log.Info("update rules from", pac.RemoteRules, "succeeded")
 				}
 			}
 		}

@@ -1,17 +1,34 @@
 package log
 
 import (
+	"io"
 	"os"
-    "time"
-    
+	"time"
+
 	. "log"
 )
 
 var (
-	Out   = New(os.Stdout, "INFO ", LstdFlags)
-	Err  = New(os.Stderr, "ERR  ", LstdFlags)
-	Warn = New(os.Stdout, "WARN ", LstdFlags)
+	Out  *Logger
+	Err  *Logger
+	Warn *Logger
 )
+
+func init() {
+}
+
+func SetOutputFile(file *os.File) {
+	writers := []io.Writer{
+		file,
+		os.Stdout,
+	}
+
+	logWriters := io.MultiWriter(writers...)
+
+	Out = New(logWriters, "INFO ", LstdFlags)
+	Err = New(logWriters, "ERR  ", LstdFlags)
+	Warn = New(logWriters, "WARN ", LstdFlags)
+}
 
 func Info(v ...interface{}) {
 	Out.Println(v...)
@@ -40,8 +57,8 @@ func Errorf(format string, v ...interface{}) {
 // 写超时警告日志 通用方法
 
 func TimeoutWarning(detailed string, start time.Time, timeLimit float64) {
-  dis := time.Now().Sub(start).Seconds()
-  if dis > timeLimit {
-    Warning(detailed, "using", dis, "seconds")
-  }
+	dis := time.Now().Sub(start).Seconds()
+	if dis > timeLimit {
+		Warning(detailed, "using", dis, "seconds")
+	}
 }

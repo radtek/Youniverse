@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/ssoor/socks"
+	"github.com/ssoor/youniverse/log"
 )
 
 type DecorateClient struct {
@@ -22,7 +23,7 @@ func NewDecorateClient(forward socks.Dialer, ds ...ConnDecorator) *DecorateClien
 func (d *DecorateClient) Dial(network, address string) (net.Conn, error) {
 	conn, err := d.forward.Dial(network, address)
 	if err != nil {
-		ErrLog.Println("DecorateClient forward.Dial failed, err:", err, address)
+		log.Error("DecorateClient forward.Dial failed, err:", err, address)
 		return nil, err
 	}
 	dconn, err := DecorateConn(conn, d.decorators...)

@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/ssoor/socks"
+	"github.com/ssoor/youniverse/log"
 )
 
 func StartHTTPProxy(conf Proxy, router socks.Dialer, data []byte) {
 	if conf.HTTP != "" {
 		listener, err := net.Listen("tcp", conf.HTTP)
 		if err != nil {
-			ErrLog.Println("net.Listen at ", conf.HTTP, " failed, err:", err)
+			log.Error("net.Listen at ", conf.HTTP, " failed, err:", err)
 			return
 		}
 
@@ -25,7 +26,7 @@ func StartEncodeHTTPProxy(conf Proxy, router socks.Dialer, data []byte) {
 	if conf.HTTP != "" {
 		listener, err := net.Listen("tcp", conf.HTTP)
 		if err != nil {
-			ErrLog.Println("net.Listen at ", conf.HTTP, " failed, err:", err)
+			log.Error("net.Listen at ", conf.HTTP, " failed, err:", err)
 			return
 		}
 
