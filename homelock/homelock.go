@@ -79,7 +79,7 @@ func StartHomelock(guid string, setting Settings) error {
 
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
 
-	pac_addr := "127.0.0.1:" + strconv.FormatUint(uint64(PACListenPort), 10)
+	pac_addr := ":" + strconv.FormatUint(uint64(PACListenPort), 10)
 	pac, err := CreateSocksdPAC(guid, pac_addr, proxie, socksd.Upstream{}, setting.BricksURL)
 
 	if err != nil {
@@ -89,7 +89,7 @@ func StartHomelock(guid string, setting Settings) error {
 
 	go runPACServer(pac)
 
-	pac_url := "http://" + pac_addr + "/proxy.pac"
+	pac_url := "http://127.0.0.1" + pac_addr + "/proxy.pac"
 
 	isOK := SetPACProxy(pac_url)
 	log.Infof("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
@@ -101,11 +101,10 @@ func StartHomelock(guid string, setting Settings) error {
 			log.Warning("Parse encode port failed, err:", err)
 			return ErrorEncodeUnmarshal
 		}
-
-		LoadDLL()
 		pac_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(PACListenPort))
 		encode_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
 
+		LoadDLL()
 		handle := SetBusinessData(pac_sockaddr, encode_sockaddr)
 		log.Info("Setting business data", pac_sockaddr, "-", encode_sockaddr, ", share handle:", handle)
 	}

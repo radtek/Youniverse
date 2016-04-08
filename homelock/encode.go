@@ -27,11 +27,17 @@ type SOCKADDR_IN struct {
 
 func LoadDLL() {
 	// Library
-	libhttpredirect = winapi.MustLoadLibrary("httpredirect.dll")
+	libhttpredirect = winapi.MustLoadLibrary("dnsepi.dll")
 
 	// Functions
 	startBusiness = winapi.MustGetProcAddress(libhttpredirect, "StartBusiness")
 	setBusinessData = winapi.MustGetProcAddress(libhttpredirect, "SetBusinessData")
+}
+
+func UnoadDLL() {
+    startBusiness = 0;
+    setBusinessData = 0;
+    syscall.FreeLibrary(syscall.Handle(libhttpredirect))
 }
 
 func SocketCreateSockAddr(host string, port uint16) (addrSocket SOCKADDR_IN) {

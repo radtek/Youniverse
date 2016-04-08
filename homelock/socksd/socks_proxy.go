@@ -30,7 +30,7 @@ func StartEncodeHTTPProxy(conf Proxy, router socks.Dialer, data []byte) {
 			return
 		}
 
-		listener = socks.NewHTTPEncodeListener(listener)
+		listener = NewHTTPEncodeListener(listener)
 
 		defer listener.Close()
 		httpProxy := socks.NewHTTPProxy(router,  NewHTTPTransport(router,data))
