@@ -50,46 +50,51 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 		return this.rwc.Read(data)
 	}
 
-	if 0 != this.decodeSize { //解密头已获得,进入解密流程
-		if lenght, err = this.rwc.Read(data); err != nil {
+	if 0 == len(this.needRead) { // 缓冲区没有需要发送的数据
+		if 0 == this.decodeSize { // 当前需要解密的数据为0，准备接受下一个加密头
+			this.isPass = true                                                                    // 一个新的数据包,默认不需要解密，直接放过
+			if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil == err { // 检测数据包是否为加密包或者有效的 HTTP 包
+
+				this.needRead = this.decodeHead[:MaxHeaderSize] // 数据需要发送
+				//log.Info("HTTP read data", this.decodeHead, ", need data size is ", len(data))
+
+				if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
+					this.decodeSize = lenght
+					this.decodeCode = this.decodeHead[3]
+
+					this.isPass = false // 数据需要解密
+					this.needRead[0] = 'G'
+					this.needRead[1] = 'E'
+					this.needRead[2] = 'T'
+					this.needRead[3] = ' '
+
+					log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
+				}
+			}
+		} else { //解密大小已获得,进入解密流程
+
+			if lenght, err = this.rwc.Read(data); err != nil {
+				return
+			}
+
+			if lenght > this.decodeSize {
+				lenght = this.decodeSize
+			}
+
+			for i := 0; i < int(lenght); i++ {
+				data[i] ^= this.decodeCode | 0x80
+			}
+
+			this.decodeSize -= lenght
+			//fmt.Print(string(data[:lenght]))
+
+			if 0 == this.decodeSize {
+				this.isPass = false // 数据解密完成
+			}
+
 			return
 		}
 
-		if lenght > this.decodeSize {
-			lenght = this.decodeSize
-		}
-
-		for i := 0; i < int(lenght); i++ {
-			data[i] ^= this.decodeCode | 0x80
-		}
-
-		this.decodeSize -= lenght
-		//fmt.Print(string(data[:lenght]))
-
-		return
-	}
-
-	if 0 == len(this.needRead) { // 一个新的数据包
-		this.isPass = true // 数据默认不需要解密，直接放过
-
-		//log.Info("HTTP read data, need data size is ", len(data))
-		if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil == err { // 检测数据包是否为加密包或者有效的 HTTP 包
-
-			this.needRead = this.decodeHead[:MaxHeaderSize] // 数据需要发送
-
-			if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
-				this.decodeSize = lenght
-				this.decodeCode = this.decodeHead[3]
-
-				this.isPass = false // 数据需要解密
-				this.needRead[0] = 'G'
-				this.needRead[1] = 'E'
-				this.needRead[2] = 'T'
-				this.needRead[3] = ' '
-
-				log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
-			}
-		}
 	}
 
 	if 0 != len(this.needRead) { // 发送缓冲区中的数据
