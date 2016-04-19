@@ -16,10 +16,9 @@ const (
 )
 
 var (
-	ErrorSettingQuery     error = errors.New("query setting failed")
-	ErrorSocksdCreate     error = errors.New("create socksd failed")
-	ErrorEncodeUnmarshal  error = errors.New("unmarshal encode failed")
-	ErrorSettingUnmarshal error = errors.New("unmarshal setting failed")
+	ErrorSettingQuery      error = errors.New("Query setting failed")
+	ErrorSocksdCreate      error = errors.New("Create socksd failed")
+	ErrorStartEncodeModule error = errors.New("Start encode module failed")
 )
 
 func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
@@ -50,7 +49,7 @@ func runPACServer(pac *socksd.PAC) {
 	}
 }
 
-func StartHomelock(guid string, setting Settings) error {
+func StartHomelock(guid string, setting Settings) (bool, error) {
 
 	log.Info("Set messenger encode mode:", setting.Encode)
 	log.Info("Set messenger account unique identifier:", guid)
@@ -59,7 +58,7 @@ func StartHomelock(guid string, setting Settings) error {
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
-		return ErrorSocksdCreate
+		return false, ErrorSocksdCreate
 	}
 
 	log.Info("Creating an internal server:")
@@ -74,7 +73,7 @@ func StartHomelock(guid string, setting Settings) error {
 	srules, err := api.GetURL(setting.RulesURL)
 	if err != nil {
 		log.Errorf("Query srules: %s failed, err: %s\n", setting.RulesURL, err)
-		return ErrorSocksdCreate
+		return false, ErrorSettingQuery
 	}
 
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
@@ -84,30 +83,34 @@ func StartHomelock(guid string, setting Settings) error {
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)
-		return ErrorSocksdCreate
+		return false, ErrorSocksdCreate
 	}
 
 	go runPACServer(pac)
 
 	pac_url := "http://127.0.0.1" + pac_addr + "/proxy.pac"
 
-	isOK := SetPACProxy(pac_url)
-	log.Infof("Setting system browser pac information: %s, stats %t\n", pac_url, isOK)
+	succ, err := SetPACProxy(pac_url)
+	log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pac_url, succ, err)
 
 	if setting.Encode {
 		listenHTTP := pac.Rules[0].Proxy
 		encodeport, err := strconv.ParseUint(listenHTTP[strings.LastIndexByte(listenHTTP, ':')+1:], 10, 16)
 		if err != nil {
 			log.Warning("Parse encode port failed, err:", err)
-			return ErrorEncodeUnmarshal
+			return true, ErrorStartEncodeModule
 		}
-		pac_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(PACListenPort))
-		encode_sockaddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
+		pacAddr := SocketCreateSockAddr("127.0.0.1", uint16(PACListenPort))
+		encodeAddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
 
-		LoadDLL()
-		handle := SetBusinessData(pac_sockaddr, encode_sockaddr)
-		log.Info("Setting business data", pac_sockaddr, "-", encode_sockaddr, ", share handle:", handle)
+		if err := LoadDLL(); err != nil {
+			log.Info("Init business module failed:", err)
+			return true, ErrorStartEncodeModule
+		}
+
+		handle := SetBusinessData(pacAddr, encodeAddr)
+		log.Info("Setting business data share handle:", handle)
 	}
 
-	return nil
+	return true, nil
 }

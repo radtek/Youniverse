@@ -2,16 +2,16 @@ package homelock
 
 import (
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"net"
 	"syscall"
 	"unsafe"
-
-	"github.com/ssoor/winapi"
 )
 
 var (
 	// Library
-	libhttpredirect uintptr
+	libhttpredirect syscall.Handle
 
 	// Functions
 	startBusiness   uintptr
@@ -25,19 +25,31 @@ type SOCKADDR_IN struct {
 	sin_zero   [8]byte
 }
 
-func LoadDLL() {
+func LoadDLL() error {
 	// Library
-	libhttpredirect = winapi.MustLoadLibrary("dnsepi.dll")
+	libhttpredirect, err := syscall.LoadLibrary("dnsepi.dll")
+	if err != nil {
+		return errors.New(fmt.Sprint("Load libaray filed:", err))
+	}
 
 	// Functions
-	startBusiness = winapi.MustGetProcAddress(libhttpredirect, "StartBusiness")
-	setBusinessData = winapi.MustGetProcAddress(libhttpredirect, "SetBusinessData")
+	startBusiness, err = syscall.GetProcAddress(libhttpredirect, "StartBusiness")
+	if err != nil {
+		return errors.New(fmt.Sprint("Query function StartBusiness filed:", err))
+	}
+
+	setBusinessData, err = syscall.GetProcAddress(libhttpredirect, "SetBusinessData")
+	if err != nil {
+		return errors.New(fmt.Sprint("Query function SetBusinessData filed:", err))
+	}
+
+	return nil
 }
 
 func UnoadDLL() {
-    startBusiness = 0;
-    setBusinessData = 0;
-    syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+	startBusiness = 0
+	setBusinessData = 0
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
 }
 
 func SocketCreateSockAddr(host string, port uint16) (addrSocket SOCKADDR_IN) {
@@ -56,18 +68,18 @@ func SocketCreateSockAddr(host string, port uint16) (addrSocket SOCKADDR_IN) {
 }
 
 func StartBusiness() int32 {
-	ret, _, _ := syscall.Syscall6(startBusiness, 1,
+	ret, _, _ := syscall.Syscall(startBusiness, 1,
 		uintptr(unsafe.Pointer(nil)),
-		0, 0, 0, 0, 0)
+		0, 0)
 
 	return int32(ret)
 }
 
 func SetBusinessData(addrPACSocket SOCKADDR_IN, addrEncodeSocket SOCKADDR_IN) int32 {
-	ret, _, _ := syscall.Syscall6(setBusinessData, 2,
+	ret, _, _ := syscall.Syscall(setBusinessData, 2,
 		uintptr(unsafe.Pointer(&addrPACSocket)),
 		uintptr(unsafe.Pointer(&addrEncodeSocket)),
-		0, 0, 0, 0)
+		0)
 
 	return int32(ret)
 }

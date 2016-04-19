@@ -223,8 +223,9 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start homelock module:")
-	if err := homelock.StartHomelock(guid, config.Homelock); err != nil {
-		log.Warning("[MAIN] Homelock start failed:", err)
+	succ, err := homelock.StartHomelock(guid, config.Homelock)
+	log.Warning("[MAIN] Homelock start stats:", succ, "error:", err)
+	if false == succ {
 		return
 	}
 

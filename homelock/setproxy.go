@@ -1,13 +1,30 @@
 package homelock
 
 import (
+	"errors"
+	"fmt"
 	"syscall"
 	"unsafe"
 
 	"github.com/ssoor/winapi"
 )
 
-func SetPACProxy(autoConfigURL string) bool {
+func ClearIEBrowserSafeTip() (bool, error) {
+	var openHKey winapi.HKEY
+	if errorCode := winapi.RegOpenKeyEx(winapi.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", 0, winapi.KEY_READ|winapi.KEY_WRITE, &openHKey); errorCode != 0 {
+		return false, errors.New(fmt.Sprint("Open registry filed:", errorCode))
+	}
+
+	var warnValue uint32 = 0
+
+	if errorCode := winapi.RegSetValueEx(openHKey, "WarnOnIntranet", 0, winapi.REG_DWORD, (*byte)(unsafe.Pointer(&warnValue)), 4); errorCode != 0 {
+		return false, errors.New(fmt.Sprint("Save registry value filed:", errorCode))
+	}
+
+	return false, nil
+}
+
+func SetPACProxy(autoConfigURL string) (bool, error) {
 	var proxyInternetOptions [5]winapi.INTERNET_PER_CONN_OPTION
 	var proxyInternetOptionList winapi.INTERNET_PER_CONN_OPTION_LIST
 
@@ -34,5 +51,11 @@ func SetPACProxy(autoConfigURL string) bool {
 	proxyInternetOptionList.OptionCount = 5
 	proxyInternetOptionList.Options = (*winapi.INTERNET_PER_CONN_OPTION)(unsafe.Pointer(&proxyInternetOptions))
 
-	return winapi.InternetSetOption(nil, winapi.INTERNET_OPTION_PER_CONNECTION_OPTION, &proxyInternetOptionList, proxyInternetOptionList.Size)
+	succ, err := ClearIEBrowserSafeTip()
+
+	if succ = winapi.InternetSetOption(nil, winapi.INTERNET_OPTION_PER_CONNECTION_OPTION, &proxyInternetOptionList, proxyInternetOptionList.Size); false == succ {
+		err = errors.New("Change internet option failed.")
+	}
+
+	return succ, err
 }
