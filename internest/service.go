@@ -32,7 +32,7 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 	}
 
 	if _, isHave := this.signBussiness[bussinessType]; isHave {
-		return 200, this.signBussiness[bussinessType], nil
+		return 200, []byte(this.signBussiness[bussinessType]), nil
 	}
 
 	url, err := url.Parse("http://social.ssoor.com/warrant/enforce/20160308/" + this.warrantCode + ".enforce")
@@ -51,5 +51,5 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 
 	this.signBussiness[bussinessType] = json_sign
 
-	return 200, json_sign, nil
+	return 200, []byte(json_sign), nil
 }

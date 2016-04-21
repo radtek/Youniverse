@@ -106,20 +106,27 @@ func StartFundadores(guid string, setting Settings) (bool, error) {
 		resource.Save.X86.Path = os.ExpandEnv(resource.Save.X86.Path)
 		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, resource.Save.X86.Path)
 
+		log.Info("Fundadores download resource", resource.Name, "to", resource.Save.X86.Path, ", stats is:", nil == err)
+
 		if nil != err {
-			return false, err
+			if true == resource.Save.X86.Must {
+				return false, err
+			}
+
+			log.Error("\t", err)
+		} else {
+			log.Info("\tresource size is", fileSize)
 		}
 
-		log.Info("Fundadores download", resource.Name, "to", resource.Save.X86.Path, "success, resource size is", fileSize)
 	}
 
 	for _, resource := range setting.Resources {
-		fileSize, err := implementationResource(resource.Save.X86.Type, resource.Save.X86.Path, resource.Save.X86.Param)
+		succ, err := implementationResource(resource.Save.X86.Type, resource.Save.X86.Path, resource.Save.X86.Param)
 
-		if nil != err {
-			log.Warning("Fundadores download resource failed:", err)
-		} else {
-			log.Info("Fundadores download", resource.Name, "to", resource.Save.X86.Path, "success, resource size is", fileSize)
+		log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.X86.Path, ", parameters is", resource.Save.X86.Param, ", stats is:", succ)
+
+		if false == succ {
+			log.Error("\t", err)
 		}
 	}
 
@@ -130,5 +137,5 @@ func StartFundadores(guid string, setting Settings) (bool, error) {
 	log.Info("\tPEER : ", youniverse.Resource.Stats.PeerLoads.String(), "\tERROR: ", youniverse.Resource.Stats.PeerErrors.String())
 	log.Info("\tLOCAL: ", youniverse.Resource.Stats.LocalLoads.String(), "\tERROR: ", youniverse.Resource.Stats.LocalLoadErrs.String())
 
-	return false, nil
+	return true, nil
 }

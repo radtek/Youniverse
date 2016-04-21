@@ -1,15 +1,16 @@
 package fundadores
 
 type saveInfo struct {
-	Type string `json:"type"`
-	Path string `json:"path"`
+	Must  bool   `json:"must"`
+	Type  string `json:"type"`
+	Path  string `json:"path"`
 	Param string `json:"param"`
 }
 
 type saveInfos struct {
-	X86     saveInfo `json:"x86"`
-	X64     saveInfo `json:"x64"`
-	Arm     saveInfo `json:"arm"`
+	X86 saveInfo `json:"x86"`
+	X64 saveInfo `json:"x64"`
+	Arm saveInfo `json:"arm"`
 }
 
 type Resource struct {

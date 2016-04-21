@@ -68,7 +68,7 @@ func StartInternest(guid string, setting Settings) (bool, error) {
 	if succ := winapi.GlobalMemoryStatusEx(&statex); false == succ {
 		return false, errors.New(fmt.Sprint("Query memory stats info failed:", winapi.GetLastError()))
 	}
-	log.Info("\t", "mem:", strconv.FormatUint(statex.TotalPhys/1024/1024, 10),"MB")
+	log.Info("\t", "mem:", strconv.FormatUint(statex.TotalPhys/1024/1024, 10), "MB")
 
 	query.Set("mac", mac)
 	query.Set("cpu", cpu)
@@ -87,7 +87,7 @@ func StartInternest(guid string, setting Settings) (bool, error) {
 	if osVersion < 0x80000000 {
 		buildVersion = int(winapi.HIWORD(uint32(osVersion)))
 	}
-	log.Info("\t", "version:",  fmt.Sprintf("Windows %d.%d(%d)", majorVersion, minorVersion, buildVersion))
+	log.Info("\t", "version:", fmt.Sprintf("Windows %d.%d(%d)", majorVersion, minorVersion, buildVersion))
 
 	query.Set("browser", browser)
 	query.Set("os", fmt.Sprintf("Windows %d.%d(%d)", majorVersion, minorVersion, buildVersion))
@@ -96,7 +96,7 @@ func StartInternest(guid string, setting Settings) (bool, error) {
 
 	json_sign, err := api.GetURL(url.String())
 	if err != nil {
-		return false, errors.New("Query internest sign interface failed.")
+		return false, errors.New(fmt.Sprint("Query internest sign ", url, " failed."))
 	}
 
 	response := responseSign{}
@@ -106,7 +106,7 @@ func StartInternest(guid string, setting Settings) (bool, error) {
 
 	warrantAPI := NewWarrantAPI(mac, response.Warrant)
 
-	service := webapi.NewJsonAPI()
+	service := webapi.NewByteAPI()
 	service.AddResource(warrantAPI, "/warrant")
 
 	go service.Start(10010)

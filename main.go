@@ -201,23 +201,25 @@ func main() {
 
 	log.Info("[MAIN] Start fundadores module:")
 	succ, err := fundadores.StartFundadores(guid, config.Fundadores)
-	log.Warning("[MAIN] Fundadores start stats:", succ, "error:")
-	log.Warning("\t", err)
+	log.Info("[MAIN] Fundadores start stats:", succ)
 	if false == succ {
+		log.Error("[MAIN] \t", err)
 		return
 	}
 
 	log.Info("[MAIN] Start internest module:")
-	succ, err = internest.StartInternest("auto", config.Internest)
-	log.Warning("[MAIN] Internest start stats:", succ, "error:\n\t", err)
+	succ, err = internest.StartInternest("dbda2c80", config.Internest)
+	log.Info("[MAIN] Internest start stats:", succ)
 	if false == succ {
+		log.Error("[MAIN] \t", err)
 		return
 	}
 
 	log.Info("[MAIN] Start homelock module:")
 	succ, err = homelock.StartHomelock(guid, config.Homelock)
-	log.Warning("[MAIN] Homelock start stats:", succ, "error:\n\t", err)
+	log.Info("[MAIN] Homelock start stats:", succ)
 	if false == succ {
+		log.Error("[MAIN] \t", err)
 		return
 	}
 
