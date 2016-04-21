@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/youniverse"
@@ -46,11 +48,11 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 	}
 
 	syscall.MoveFile(syscall.StringToUTF16Ptr(fileName), syscall.StringToUTF16Ptr(fileName+".del-"+strconv.Itoa(rand.Intn(10086))))
-	
+
 	file, err := os.Create(fileName)
 
 	if nil != err {
-		return 0, errors.New(fmt.Sprint(resourceKey, "create failed:", err))
+		return 0, errors.New(fmt.Sprint(resourceKey, " create failed: ", err))
 	}
 
 	defer file.Close()
@@ -58,23 +60,66 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 	writeSize, err := file.Write(data)
 
 	if nil != err {
-		return 0, errors.New(fmt.Sprint(resourceKey, "save failed:", err))
+		return 0, errors.New(fmt.Sprint(resourceKey, " save failed: ", err))
 	}
 
 	return writeSize, nil
 }
 
-func StartFundadores(guid string, setting Settings) error {
+func implementationResource(resourceType string, filePath string, jsonParameter string) (bool, error) {
+	switch resourceType {
+	case "res":
+		return true, nil
+	case "exec":
+		exec_cmd := exec.Command(filePath, "-fundadores", jsonParameter)
+		if err := exec_cmd.Start(); nil != err {
+			return false, err
+		}
+	case "rundll":
+		exec_cmd := exec.Command(os.ExpandEnv("${windir}\\System32\\Rundll32.exe"), filePath+",Fundadores", jsonParameter)
+		if err := exec_cmd.Start(); nil != err {
+			return false, err
+		}
+	case "loaddll":
+		library, err := syscall.LoadLibrary(filePath)
+		if nil != err {
+			return false, err
+		}
+
+		procFundadores, err := syscall.GetProcAddress(library, "Fundadores")
+		if nil != err {
+			return false, err
+		}
+
+		if ret, _, err := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(jsonParameter))), 0, 0); 0 == ret {
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
+func StartFundadores(guid string, setting Settings) (bool, error) {
 	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", getCurrentDirectory())
 
 	for _, resource := range setting.Resources {
-		savePath := os.ExpandEnv(resource.Save.X86.Path)
-		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, savePath)
+		resource.Save.X86.Path = os.ExpandEnv(resource.Save.X86.Path)
+		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, resource.Save.X86.Path)
+
+		if nil != err {
+			return false, err
+		}
+
+		log.Info("Fundadores download", resource.Name, "to", resource.Save.X86.Path, "success, resource size is", fileSize)
+	}
+
+	for _, resource := range setting.Resources {
+		fileSize, err := implementationResource(resource.Save.X86.Type, resource.Save.X86.Path, resource.Save.X86.Param)
 
 		if nil != err {
 			log.Warning("Fundadores download resource failed:", err)
 		} else {
-			log.Info("Fundadores download", resource.Name, "to", savePath, "success, resource size is", fileSize)
+			log.Info("Fundadores download", resource.Name, "to", resource.Save.X86.Path, "success, resource size is", fileSize)
 		}
 	}
 
@@ -85,5 +130,5 @@ func StartFundadores(guid string, setting Settings) error {
 	log.Info("\tPEER : ", youniverse.Resource.Stats.PeerLoads.String(), "\tERROR: ", youniverse.Resource.Stats.PeerErrors.String())
 	log.Info("\tLOCAL: ", youniverse.Resource.Stats.LocalLoads.String(), "\tERROR: ", youniverse.Resource.Stats.LocalLoadErrs.String())
 
-	return nil
+	return false, nil
 }

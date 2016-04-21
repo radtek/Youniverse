@@ -164,6 +164,8 @@ func main() {
 
 	go startSignalNotify()
 
+	defer log.Info("[MAIN] The Youniverse has finished running, exiting...")
+
 	port, err := SocketSelectPort("tcp", int(YouniverseListenPort))
 
 	if err != nil {
@@ -198,21 +200,23 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start fundadores module:")
-	if err := fundadores.StartFundadores(guid, config.Fundadores); err != nil {
-		log.Warning("[MAIN] Fundadores start failed:", err)
+	succ, err := fundadores.StartFundadores(guid, config.Fundadores)
+	log.Warning("[MAIN] Fundadores start stats:", succ, "error:")
+	log.Warning("\t", err)
+	if false == succ {
 		return
 	}
 
 	log.Info("[MAIN] Start internest module:")
-	succ, err := internest.StartInternest("auto", config.Internest)
-	log.Warning("[MAIN] Internest start stats:", succ, "error:", err)
+	succ, err = internest.StartInternest("auto", config.Internest)
+	log.Warning("[MAIN] Internest start stats:", succ, "error:\n\t", err)
 	if false == succ {
 		return
 	}
 
 	log.Info("[MAIN] Start homelock module:")
 	succ, err = homelock.StartHomelock(guid, config.Homelock)
-	log.Warning("[MAIN] Homelock start stats:", succ, "error:", err)
+	log.Warning("[MAIN] Homelock start stats:", succ, "error:\n\t", err)
 	if false == succ {
 		return
 	}
@@ -222,6 +226,4 @@ func main() {
 	signal.Notify(chanSignal, os.Interrupt, os.Kill)
 
 	<-chanSignal
-
-	defer log.Info("[MAIN] Process is exit")
 }

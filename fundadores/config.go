@@ -3,6 +3,7 @@ package fundadores
 type saveInfo struct {
 	Type string `json:"type"`
 	Path string `json:"path"`
+	Param string `json:"param"`
 }
 
 type saveInfos struct {
