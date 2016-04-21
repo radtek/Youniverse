@@ -20,6 +20,8 @@ func ClearIEBrowserSafeTip() (bool, error) {
 	if errorCode := winapi.RegSetValueEx(openHKey, "WarnOnIntranet", 0, winapi.REG_DWORD, (*byte)(unsafe.Pointer(&warnValue)), 4); errorCode != 0 {
 		return false, errors.New(fmt.Sprint("Save registry value filed:", errorCode))
 	}
+	
+	winapi.RegCloseKey(openHKey)
 
 	return false, nil
 }

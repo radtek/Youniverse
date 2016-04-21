@@ -15,8 +15,10 @@ import (
 	"os/signal"
 
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/fundadores"
 	"github.com/ssoor/youniverse/homelock"
+	"github.com/ssoor/youniverse/internest"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/youniverse"
 )
@@ -75,27 +77,6 @@ func getInternalIPs() (ips []string, err error) {
 	}
 
 	return ips, nil
-}
-
-var (
-	ErrorNotValidAddress = errors.New("Not a valid link address")
-)
-
-func getConnectIP(connType string, connHost string) (ip string, err error) { //Get ip
-	conn, err := net.Dial(connType, connHost)
-	if err != nil {
-		return ip, err
-	}
-
-	defer conn.Close()
-
-	strSplit := strings.Split(conn.LocalAddr().String(), ":")
-
-	if len(strSplit) < 2 {
-		return ip, ErrorNotValidAddress
-	}
-
-	return strSplit[0], nil
 }
 
 var chanSignal chan os.Signal = make(chan os.Signal, 1)
@@ -203,7 +184,7 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start youniverse module:")
-	connInternalIP, err := getConnectIP("tcp", "www.baidu.com:80")
+	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
 
 	if err != nil {
 		log.Error("Query connection ip failed:", err)
@@ -222,8 +203,15 @@ func main() {
 		return
 	}
 
+	log.Info("[MAIN] Start internest module:")
+	succ, err := internest.StartInternest("auto", config.Internest)
+	log.Warning("[MAIN] Internest start stats:", succ, "error:", err)
+	if false == succ {
+		return
+	}
+
 	log.Info("[MAIN] Start homelock module:")
-	succ, err := homelock.StartHomelock(guid, config.Homelock)
+	succ, err = homelock.StartHomelock(guid, config.Homelock)
 	log.Warning("[MAIN] Homelock start stats:", succ, "error:", err)
 	if false == succ {
 		return
