@@ -49,7 +49,7 @@ func SocketSelectPort(port_type string, port_base int) (int16, error) {
 
 func getStartSettings(guid string) (config Config, err error) {
 
-	url := "http://younverse.ssoor.com/issued/settings/20160404/" + guid + ".settings"
+	url := "http://younverse.ssoor.com/issued/settings/20160422/" + guid + ".settings"
 
 	json_config, err := api.GetURL(url)
 	if err != nil {
