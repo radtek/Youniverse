@@ -41,13 +41,15 @@ type responseSign struct {
 	Warrant string `json:"warrant"`
 }
 
-func StartInternest(guid string, setting Settings) (bool, error) {
-	url, err := url.Parse("http://social.ssoor.com/warrant/sign/20160308/" + guid + ".sign")
+func StartInternest(account string, guid string, setting Settings) (bool, error) {
+	url, err := url.Parse(setting.SignURL)
 	if nil != err {
 		return false, err
 	}
 
 	query := url.Query()
+	query.Set("account", account)
+
 	log.Info("Internest sign info:")
 
 	mac, err := common.GetConnectMAC("tcp", "www.baidu.com:80")
@@ -94,22 +96,22 @@ func StartInternest(guid string, setting Settings) (bool, error) {
 
 	url.RawQuery = query.Encode()
 
-	json_sign, err := api.GetURL(url.String())
+	jsonSign, err := api.GetURL(url.String())
 	if err != nil {
 		return false, errors.New(fmt.Sprint("Query internest sign ", url, " failed."))
 	}
 
 	response := responseSign{}
-	if err = json.Unmarshal([]byte(json_sign), &response); err != nil {
+	if err = json.Unmarshal([]byte(jsonSign), &response); err != nil {
 		return false, errors.New("Unmarshal internest sign interface failed.")
 	}
 
-	warrantAPI := NewWarrantAPI(mac, response.Warrant)
+	warrantAPI := NewWarrantAPI(mac, setting.EnforceURL)
 
 	service := webapi.NewByteAPI()
 	service.AddResource(warrantAPI, "/warrant")
 
-	go service.Start(10010)
+	go service.Start(setting.APIPort)
 
 	return true, nil
 }

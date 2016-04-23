@@ -49,12 +49,11 @@ func runPACServer(pac *socksd.PAC) {
 	}
 }
 
-func StartHomelock(guid string, setting Settings) (bool, error) {
+func StartHomelock(account string, guid string, setting Settings) (bool, error) {
 
 	log.Info("Set messenger encode mode:", setting.Encode)
-	log.Info("Set messenger account unique identifier:", guid)
 
-	proxie, err := CreateSocksdProxy(guid, "127.0.0.1", setting.Services)
+	proxie, err := CreateSocksdProxy(account, "127.0.0.1", setting.Services)
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
@@ -79,7 +78,7 @@ func StartHomelock(guid string, setting Settings) (bool, error) {
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
 
 	pac_addr := ":" + strconv.FormatUint(uint64(PACListenPort), 10)
-	pac, err := CreateSocksdPAC(guid, pac_addr, proxie, socksd.Upstream{}, setting.BricksURL)
+	pac, err := CreateSocksdPAC(account, pac_addr, proxie, socksd.Upstream{}, setting.BricksURL)
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)

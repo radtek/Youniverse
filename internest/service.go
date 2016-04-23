@@ -12,14 +12,14 @@ import (
 
 type WarrantAPI struct {
 	deviceCode    string
-	warrantCode   string
+	enforceURL    string
 	signBussiness map[string]string
 }
 
-func NewWarrantAPI(deviceCode string, warrantCode string) *WarrantAPI {
+func NewWarrantAPI(deviceCode string, enforceURL string) *WarrantAPI {
 	return &WarrantAPI{
+		enforceURL:    enforceURL,
 		deviceCode:    deviceCode,
-		warrantCode:   warrantCode,
 		signBussiness: make(map[string]string),
 	}
 }
@@ -35,7 +35,7 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 		return 200, []byte(this.signBussiness[bussinessType]), nil
 	}
 
-	url, err := url.Parse("http://social.ssoor.com/warrant/enforce/20160308/" + this.warrantCode + ".enforce")
+	url, err := url.Parse(this.enforceURL)
 	if nil != err {
 		return 501, err, nil
 	}

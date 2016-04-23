@@ -142,11 +142,12 @@ func startSignalNotify() {
 }
 
 func main() {
-	var guid string
 	var debug bool
+	var guid, account string
 
 	flag.BoolVar(&debug, "debug", false, "Whether to start the debug mode")
-	flag.StringVar(&guid, "guid", "00000000_00000000", "user unique identifier,used to obtain user configuration")
+	flag.StringVar(&account, "account", "everyone", "user name, used to obtain user configuration")
+	flag.StringVar(&guid, "guid", "auto", "unique identifier, used to obtain user configuration")
 
 	flag.Parse()
 
@@ -166,6 +167,9 @@ func main() {
 
 	defer log.Info("[MAIN] The Youniverse has finished running, exiting...")
 
+	log.Info("[MAIN] Youniverse guid:", guid)
+	log.Info("[MAIN] Youniverse account name:", account)
+
 	port, err := SocketSelectPort("tcp", int(YouniverseListenPort))
 
 	if err != nil {
@@ -173,7 +177,7 @@ func main() {
 		return
 	}
 
-	config, err := getStartSettings(guid)
+	config, err := getStartSettings(account)
 
 	if err != nil {
 		log.Error("Request start settings failed:", err)
@@ -194,13 +198,13 @@ func main() {
 	}
 
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
-	if err := youniverse.StartYouniverse(guid, peerAddr, config.Youniverse); err != nil {
+	if err := youniverse.StartYouniverse(account, guid, peerAddr, config.Youniverse); err != nil {
 		log.Error("[MAIN] Youniverse start failed:", err)
 		return
 	}
 
 	log.Info("[MAIN] Start fundadores module:")
-	succ, err := fundadores.StartFundadores(guid, config.Fundadores)
+	succ, err := fundadores.StartFundadores(account, guid, config.Fundadores)
 	log.Info("[MAIN] Fundadores start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
@@ -208,7 +212,7 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start internest module:")
-	succ, err = internest.StartInternest("dbda2c80", config.Internest)
+	succ, err = internest.StartInternest(account, guid, config.Internest)
 	log.Info("[MAIN] Internest start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
@@ -216,7 +220,7 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start homelock module:")
-	succ, err = homelock.StartHomelock(guid, config.Homelock)
+	succ, err = homelock.StartHomelock(account, guid, config.Homelock)
 	log.Info("[MAIN] Homelock start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)

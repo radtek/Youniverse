@@ -99,7 +99,7 @@ func implementationResource(resourceType string, filePath string, jsonParameter 
 	return true, nil
 }
 
-func StartFundadores(guid string, setting Settings) (bool, error) {
+func StartFundadores(account string, guid string, setting Settings) (bool, error) {
 	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", getCurrentDirectory())
 
 	for _, resource := range setting.Resources {

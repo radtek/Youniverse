@@ -65,17 +65,17 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 			}).Dial,
 			TLSHandshakeTimeout:   3 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-            ResponseHeaderTimeout: 10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
 		}
 	},
 }
 
-func StartYouniverse(guid string, peerAddr string, setting Settings) error {
+func StartYouniverse(account string, guid string, peerAddr string, setting Settings) error {
 
 	peers := groupcache.NewHTTPPoolOpts("http://"+peerAddr, GCHTTPPoolOptions)
 	log.Info("Create Youiverse HTTP pool: http://" + peerAddr)
 
-	peerUrls, err := getPeers(guid, setting.PeersURL, "http://"+peerAddr)
+	peerUrls, err := getPeers(account, setting.PeersURL, "http://"+peerAddr)
 	if nil != err {
 		return err
 	}
