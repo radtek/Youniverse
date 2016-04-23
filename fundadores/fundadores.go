@@ -92,7 +92,7 @@ func implementationResource(resourceType string, filePath string, execParameter 
 		}
 
 		if ret, _, err := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(execParameter))), 0, 0); 0 == ret {
-			return false, err
+			return ret != 0, err
 		}
 	}
 
