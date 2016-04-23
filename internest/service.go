@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 
 	"github.com/ssoor/webapi"
 	"github.com/ssoor/youniverse/api"
@@ -40,8 +42,9 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 		return 501, err, nil
 	}
 
+	values.Set("internest", strconv.Itoa(os.Getpid()))
+	
 	url.RawQuery = values.Encode()
-
 	log.Info("Internest enforce bussiness:", url)
 
 	json_sign, err := api.GetURL(url.String())
