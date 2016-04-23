@@ -66,17 +66,17 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 	return writeSize, nil
 }
 
-func implementationResource(resourceType string, filePath string, jsonParameter string) (bool, error) {
+func implementationResource(resourceType string, filePath string, execParameter string) (bool, error) {
 	switch resourceType {
 	case "res":
 		return true, nil
-	case "exec":
-		exec_cmd := exec.Command(filePath, "-fundadores", jsonParameter)
+	case "runexe":
+		exec_cmd := exec.Command(filePath, "-fundadores", execParameter)
 		if err := exec_cmd.Start(); nil != err {
 			return false, err
 		}
 	case "rundll":
-		exec_cmd := exec.Command(os.ExpandEnv("${windir}\\System32\\Rundll32.exe"), filePath+",Fundadores", jsonParameter)
+		exec_cmd := exec.Command(os.ExpandEnv("${windir}\\System32\\Rundll32.exe"), filePath+",Fundadores", execParameter)
 		if err := exec_cmd.Start(); nil != err {
 			return false, err
 		}
@@ -91,7 +91,7 @@ func implementationResource(resourceType string, filePath string, jsonParameter 
 			return false, err
 		}
 
-		if ret, _, err := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(jsonParameter))), 0, 0); 0 == ret {
+		if ret, _, err := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(execParameter))), 0, 0); 0 == ret {
 			return false, err
 		}
 	}
@@ -106,7 +106,7 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 		resource.Save.X86.Path = os.ExpandEnv(resource.Save.X86.Path)
 		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, resource.Save.X86.Path)
 
-		log.Info("Fundadores download resource", resource.Name, "to", resource.Save.X86.Path, ", stats is:", nil == err)
+		log.Info("Fundadores download resource", resource.Save.X86, ", stats is:", nil == err)
 
 		if nil != err {
 			if true == resource.Save.X86.Must {
