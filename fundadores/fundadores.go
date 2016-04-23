@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/youniverse"
 )
@@ -25,14 +26,6 @@ func getMD5(data []byte) string {
 	cipherStr := md5Ctx.Sum(nil)
 
 	return hex.EncodeToString(cipherStr)
-}
-
-func getCurrentDirectory() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Error(err)
-	}
-	return strings.Replace(dir, "\\", "/", -1)
 }
 
 func downloadResourceToFile(resourceKey string, checkHash string, fileName string) (int, error) {
@@ -49,6 +42,12 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 
 	syscall.MoveFile(syscall.StringToUTF16Ptr(fileName), syscall.StringToUTF16Ptr(fileName+".del-"+strconv.Itoa(rand.Intn(10086))))
 
+	filedir, err := filepath.Abs(filepath.Dir(fileName))
+	if err != nil {
+		return 0, err
+	}
+
+	os.MkdirAll(filedir, 0777)
 	file, err := os.Create(fileName)
 
 	if nil != err {
@@ -100,16 +99,22 @@ func implementationResource(resourceType string, filePath string, execParameter 
 }
 
 func StartFundadores(account string, guid string, setting Settings) (bool, error) {
-	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", getCurrentDirectory())
+	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", common.GetCurrentDirectory())
 
 	for _, resource := range setting.Resources {
-		resource.Save.X86.Path = os.ExpandEnv(resource.Save.X86.Path)
-		fileSize, err := downloadResourceToFile(resource.Name, resource.Hash, resource.Save.X86.Path)
+		resource.Save.Path = os.ExpandEnv(resource.Save.Path)
 
-		log.Info("Fundadores download resource", resource.Save.X86, ", stats is:", nil == err)
+		var err error
+		var fileSize int
+		
+		if strings.EqualFold(resource.Save.OsType, runtime.GOARCH) {
+			fileSize, err = downloadResourceToFile(resource.Name, resource.Hash, resource.Save.Path)
+		}
+
+		log.Info("Fundadores download resource", resource.Save.Type, resource.Save.Must, resource.Save.OsType, resource.Name, ", stats is:", nil == err)
 
 		if nil != err {
-			if true == resource.Save.X86.Must {
+			if true == resource.Save.Must {
 				return false, err
 			}
 
@@ -121,9 +126,10 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 	}
 
 	for _, resource := range setting.Resources {
-		succ, err := implementationResource(resource.Save.X86.Type, resource.Save.X86.Path, resource.Save.X86.Param)
+		resource.Save.Path = os.ExpandEnv(resource.Save.Path)
+		succ, err := implementationResource(resource.Save.Type, resource.Save.Path, resource.Save.Param)
 
-		log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.X86.Path, ", parameters is", resource.Save.X86.Param, ", stats is:", succ)
+		log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.Path, ", parameters is", resource.Save.Param, ", stats is:", succ)
 
 		if false == succ {
 			log.Error("\t", err)

@@ -28,25 +28,6 @@ const (
 	YouiverseSinnalNotifyKey string = "6491628D0A302AA2"
 )
 
-var (
-	ErrorSocketUnavailable error = errors.New("socket port not find")
-)
-
-func SocketSelectPort(port_type string, port_base int) (int16, error) {
-
-	for ; port_base < 65536; port_base++ {
-
-		tcpListener, err := net.Listen(port_type, ":"+strconv.Itoa(port_base))
-
-		if err == nil {
-			tcpListener.Close()
-			return int16(port_base), nil
-		}
-	}
-
-	return 0, ErrorSocketUnavailable
-}
-
 func getStartSettings(guid string) (config Config, err error) {
 
 	url := "http://younverse.ssoor.com/issued/settings/20160422/" + guid + ".settings"
@@ -61,22 +42,6 @@ func getStartSettings(guid string) (config Config, err error) {
 	}
 
 	return config, nil
-}
-func getInternalIPs() (ips []string, err error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return ips, err
-	}
-
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				ips = append(ips, ipnet.IP.String())
-			}
-		}
-	}
-
-	return ips, nil
 }
 
 var chanSignal chan os.Signal = make(chan os.Signal, 1)
@@ -170,7 +135,7 @@ func main() {
 	log.Info("[MAIN] Youniverse guid:", guid)
 	log.Info("[MAIN] Youniverse account name:", account)
 
-	port, err := SocketSelectPort("tcp", int(YouniverseListenPort))
+	port, err := common.SocketSelectPort("tcp", int(YouniverseListenPort))
 
 	if err != nil {
 		log.Error("Select youniverse listen port failed:", err)

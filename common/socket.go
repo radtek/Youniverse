@@ -3,11 +3,13 @@ package common
 import (
 	"errors"
 	"net"
+	"strconv"
 	"strings"
 )
 
 var (
-	ErrorNotValidAddress = errors.New("Not a valid link address")
+	ErrorSocketUnavailable error = errors.New("socket port not find")
+	ErrorNotValidAddress         = errors.New("Not a valid link address")
 )
 
 func GetConnectIP(connType string, connHost string) (ip string, err error) { //Get ip
@@ -65,6 +67,23 @@ func GetConnectMAC(connType string, connHost string) (string, error) {
 	return "", errors.New("unknown error")
 }
 
+func GetIPs() (ips []string, err error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ips, err
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ips = append(ips, ipnet.IP.String())
+			}
+		}
+	}
+
+	return ips, nil
+}
+
 func GetMACs() (MACs []string, err error) {
 	interfaces, err := net.Interfaces() // 获取本机的MAC地址
 	if err != nil {
@@ -76,4 +95,18 @@ func GetMACs() (MACs []string, err error) {
 	}
 
 	return MACs, nil
+}
+
+func SocketSelectPort(port_type string, port_base int) (int16, error) {
+
+	for ; port_base < 65536; port_base++ {
+		tcpListener, err := net.Listen(port_type, ":"+strconv.Itoa(port_base))
+
+		if err == nil {
+			tcpListener.Close()
+			return int16(port_base), nil
+		}
+	}
+
+	return 0, ErrorSocketUnavailable
 }
