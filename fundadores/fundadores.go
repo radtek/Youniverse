@@ -5,14 +5,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/ssoor/youniverse/common"
@@ -40,7 +39,7 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 		return 0, errors.New(fmt.Sprint("check", resourceKey, "hash[", checkHash, "] failed, Unexpected hash", dataHash))
 	}
 
-	syscall.MoveFile(syscall.StringToUTF16Ptr(fileName), syscall.StringToUTF16Ptr(fileName+".del-"+strconv.Itoa(rand.Intn(10086))))
+	syscall.MoveFile(syscall.StringToUTF16Ptr(fileName), syscall.StringToUTF16Ptr(fileName+".del-"+fmt.Sprintf("%x", time.Now().UnixNano())))
 
 	filedir, err := filepath.Abs(filepath.Dir(fileName))
 	if err != nil {
@@ -106,7 +105,7 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 
 		var err error
 		var fileSize int
-		
+
 		if strings.EqualFold(resource.Save.OsType, runtime.GOARCH) {
 			fileSize, err = downloadResourceToFile(resource.Name, resource.Hash, resource.Save.Path)
 		}
