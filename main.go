@@ -116,7 +116,11 @@ func main() {
 
 	flag.Parse()
 
-	logFilePath := os.Args[0] + ".log"
+	logFileDir := os.ExpandEnv("${APPDATA}\\SSOOR")
+	
+	os.MkdirAll(logFileDir, 0777)
+	
+	logFilePath := logFileDir + "\\youniverse.log"
 	file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		log.Warning("open log file", logFilePath, "error:", err.Error())
