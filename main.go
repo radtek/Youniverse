@@ -30,14 +30,19 @@ const (
 
 func getStartSettings(guid string) (config Config, err error) {
 
-	url := "http://younverse.ssoor.com/issued/settings/20160422/" + guid + ".settings"
+	var url string
+	if false == strings.HasPrefix(guid, "00000000_") {
+		url = "http://social.ssoor.com/issued/settings/20160521/" + guid + ".settings"
+	} else {
+		url = "http://younverse.ssoor.com/issued/settings/20160422/" + guid + ".settings"
+	}
 
-	json_config, err := api.GetURL(url)
+	jsonConfig, err := api.GetURL(url)
 	if err != nil {
 		return config, errors.New("Query setting interface failed.")
 	}
 
-	if err = json.Unmarshal([]byte(json_config), &config); err != nil {
+	if err = json.Unmarshal([]byte(jsonConfig), &config); err != nil {
 		return config, errors.New("Unmarshal setting interface failed.")
 	}
 
@@ -117,9 +122,9 @@ func main() {
 	flag.Parse()
 
 	logFileDir := os.ExpandEnv("${APPDATA}\\SSOOR")
-	
+
 	os.MkdirAll(logFileDir, 0777)
-	
+
 	logFilePath := logFileDir + "\\youniverse.log"
 	file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
