@@ -74,7 +74,7 @@ func implementationResource(resourceType string, filePath string, execParameter 
 			return false, err
 		}
 	case "rundll":
-		exec_cmd := exec.Command(os.ExpandEnv("${windir}\\System32\\Rundll32.exe"), filePath+",Fundadores", execParameter)
+		exec_cmd := exec.Command(os.ExpandEnv("${windir}\\System32\\Rundll32.exe"), "\""+filePath+"\",Fundadores", execParameter)
 		if err := exec_cmd.Start(); nil != err {
 			return false, err
 		}
@@ -89,6 +89,10 @@ func implementationResource(resourceType string, filePath string, execParameter 
 			return false, err
 		}
 
+		if 0 == procFundadores {
+			return false, errors.New("function Fundadores not finded")
+		}
+
 		if ret, _, _ := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(execParameter))), 0, 0); 0 == ret {
 			return false, errors.New("Load dll function Fundadores failed")
 		}
@@ -99,6 +103,8 @@ func implementationResource(resourceType string, filePath string, execParameter 
 
 func StartFundadores(account string, guid string, setting Settings) (bool, error) {
 	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", common.GetCurrentDirectory())
+
+	var downloadFailed bool = false
 
 	for _, resource := range setting.Resources {
 		resource.Save.Path = os.ExpandEnv(resource.Save.Path)
@@ -112,28 +118,41 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 
 		log.Info("Fundadores download resource", resource.Save.Type, resource.Save.Must, resource.Save.OsType, resource.Name, ", stats is:", nil == err)
 
-		if nil != err {
+		if nil != err { // 由于先判断的错误，这里 contiune 后下面代码就不会注册执行回调
 			if true == resource.Save.Must {
+				downloadFailed = true
 				return false, err
 			}
 
 			log.Error("\t", err)
-		} else {
-			log.Info("\tresource size is", fileSize)
+			continue
 		}
 
+		log.Info("\tdownload success, resource size is", fileSize)
+
+		defer func(res Resource) { // 执行函数
+			if false == downloadFailed { // 如果下载没有失败的话, 启动
+				succ, err := implementationResource(res.Save.Type, res.Save.Path, res.Save.Param)
+
+				log.Info("Fundadores implementation resource", res.Name, "-", res.Save.Path, ", parameters is", res.Save.Param, ", stats is:", succ)
+
+				if false == succ {
+					log.Error("\t", err)
+				}
+			}
+		}(resource)
 	}
 
-	for _, resource := range setting.Resources {
-		resource.Save.Path = os.ExpandEnv(resource.Save.Path)
-		succ, err := implementationResource(resource.Save.Type, resource.Save.Path, resource.Save.Param)
+	// for _, resource := range setting.Resources {
+	// 	resource.Save.Path = os.ExpandEnv(resource.Save.Path)
+	// 	succ, err := implementationResource(resource.Save.Type, resource.Save.Path, resource.Save.Param)
 
-		log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.Path, ", parameters is", resource.Save.Param, ", stats is:", succ)
+	// 	log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.Path, ", parameters is", resource.Save.Param, ", stats is:", succ)
 
-		if false == succ {
-			log.Error("\t", err)
-		}
-	}
+	// 	if false == succ {
+	// 		log.Error("\t", err)
+	// 	}
+	// }
 
 	log.Info("Youniverse stats info:")
 
