@@ -16,7 +16,7 @@ import (
 
 	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/common"
-	"github.com/ssoor/youniverse/fundadores"
+	"github.com/ssoor/youniverse/fundadore"
 	"github.com/ssoor/youniverse/homelock"
 	"github.com/ssoor/youniverse/internest"
 	"github.com/ssoor/youniverse/log"
@@ -27,27 +27,6 @@ const (
 	YouniverseListenPort     uint16 = 13600
 	YouiverseSinnalNotifyKey string = "6491628D0A302AA2"
 )
-
-func getStartSettings(guid string) (config Config, err error) {
-
-	var url string
-	if false == strings.HasPrefix(guid, "00000000_") {
-		url = "http://social.ssoor.com/issued/settings/20160521/" + guid + ".settings"
-	} else {
-		url = "http://younverse.ssoor.com/issued/settings/20160422/" + guid + ".settings"
-	}
-
-	jsonConfig, err := api.GetURL(url)
-	if err != nil {
-		return config, errors.New("Query setting interface failed.")
-	}
-
-	if err = json.Unmarshal([]byte(jsonConfig), &config); err != nil {
-		return config, errors.New("Unmarshal setting interface failed.")
-	}
-
-	return config, nil
-}
 
 var chanSignal chan os.Signal = make(chan os.Signal, 1)
 
@@ -111,13 +90,34 @@ func startSignalNotify() {
 	http.Serve(listen, nil)
 }
 
+func getStartSettings(account string, guid string) (config Config, err error) {
+
+	var url string
+	if false == strings.HasPrefix(guid, "00000000_") {
+		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
+	} else {
+		url = "http://younverse.ssoor.com/issued/settings/20160422/" + account + "/" + guid + ".settings"
+	}
+
+	jsonConfig, err := api.GetURL(url)
+	if err != nil {
+		return config, errors.New("Query setting interface failed.")
+	}
+
+	if err = json.Unmarshal([]byte(jsonConfig), &config); err != nil {
+		return config, errors.New("Unmarshal setting interface failed.")
+	}
+
+	return config, nil
+}
+
 func main() {
 	var debug bool
 	var guid, account string
 
 	flag.BoolVar(&debug, "debug", false, "Whether to start the debug mode")
 	flag.StringVar(&account, "account", "everyone", "user name, used to obtain user configuration")
-	flag.StringVar(&guid, "guid", "auto", "unique identifier, used to obtain user configuration")
+	flag.StringVar(&guid, "guid", "dbda2c80", "unique identifier, used to obtain user configuration")
 
 	flag.Parse()
 
@@ -151,7 +151,7 @@ func main() {
 		return
 	}
 
-	config, err := getStartSettings(account)
+	config, err := getStartSettings(account, guid)
 
 	if err != nil {
 		log.Error("Request start settings failed:", err)
@@ -177,9 +177,9 @@ func main() {
 		return
 	}
 
-	log.Info("[MAIN] Start fundadores module:")
-	succ, err := fundadores.StartFundadores(account, guid, config.Fundadores)
-	log.Info("[MAIN] Fundadores start stats:", succ)
+	log.Info("[MAIN] Start fundadore module:")
+	succ, err := fundadore.StartFundadores(account, guid, config.Fundadore)
+	log.Info("[MAIN] Fundadore start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
 		return

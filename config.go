@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ssoor/youniverse/fundadores"
+	"github.com/ssoor/youniverse/fundadore"
 	"github.com/ssoor/youniverse/homelock"
 	"github.com/ssoor/youniverse/internest"
 	"github.com/ssoor/youniverse/youniverse"
@@ -10,6 +10,6 @@ import (
 type Config struct {
 	Homelock   homelock.Settings   `json:"homelock"`
 	Internest  internest.Settings  `json:"internest"`
-	Fundadores fundadores.Settings `json:"fundadores"`
+	Fundadore  fundadore.Settings  `json:"fundadore"`
 	Youniverse youniverse.Settings `json:"youniverse"`
 }

@@ -1,8 +1,9 @@
-package fundadores
+package fundadore
 
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/youniverse"
@@ -101,46 +103,67 @@ func implementationResource(resourceType string, filePath string, execParameter 
 	return true, nil
 }
 
+func getTasks(guid string, url string) ([]Task, error) {
+
+	jsonTasks, err := api.GetURL(url)
+	if err != nil {
+		return []Task{}, errors.New(fmt.Sprint("Query tasks interface", url, "failed."))
+	}
+
+	tasks := []Task{}
+	if err = json.Unmarshal([]byte(jsonTasks), &tasks); err != nil {
+		return []Task{}, errors.New("Unmarshal tasks interface failed.")
+	}
+
+	return tasks, nil
+}
+
 func StartFundadores(account string, guid string, setting Settings) (bool, error) {
 	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", common.GetCurrentDirectory())
 
 	var downloadFailed bool = false
 
-	for _, resource := range setting.Resources {
-		resource.Save.Path = os.ExpandEnv(resource.Save.Path)
+	allTasks, err := getTasks(account, setting.TasksURL)
+	if nil != err {
+		return false, err
+	}
+
+	for _, task := range allTasks {
+		task.Save.Path = os.ExpandEnv(task.Save.Path)
 
 		var err error
 		var fileSize int
 
-		if strings.EqualFold(resource.Save.OsType, runtime.GOARCH) {
-			fileSize, err = downloadResourceToFile(resource.Name, resource.Hash, resource.Save.Path)
-		}
+		if strings.EqualFold(task.Save.OsType, runtime.GOARCH) {
+			fileSize, err = downloadResourceToFile(task.Name, task.Hash, task.Save.Path)
 
-		log.Info("Fundadores download resource", resource.Save.Type, resource.Save.Must, resource.Save.OsType, resource.Name, ", stats is:", nil == err)
-
-		if nil != err { // 由于先判断的错误，这里 contiune 后下面代码就不会注册执行回调
-			if true == resource.Save.Must {
-				downloadFailed = true
-				return false, err
-			}
-
-			log.Error("\t", err)
-			continue
-		}
-
-		log.Info("\tdownload success, resource size is", fileSize)
-
-		defer func(res Resource) { // 执行函数
-			if false == downloadFailed { // 如果下载没有失败的话, 启动
-				succ, err := implementationResource(res.Save.Type, res.Save.Path, res.Save.Param)
-
-				log.Info("Fundadores implementation resource", res.Name, "-", res.Save.Path, ", parameters is", res.Save.Param, ", stats is:", succ)
-
-				if false == succ {
-					log.Error("\t", err)
+			if nil != err { // 由于先判断的错误，这里 contiune 后下面代码就不会注册执行回调
+				if true == task.Save.Must {
+					downloadFailed = true
+					return false, err
 				}
+
+				log.Error("\t", err)
+				continue
 			}
-		}(resource)
+
+			log.Info("\tdownload success, resource size is", fileSize)
+
+			defer func(res Task) { // 执行函数
+				if false == downloadFailed { // 如果下载没有失败的话, 启动
+					succ, err := implementationResource(res.Save.Type, res.Save.Path, res.Save.Param)
+
+					log.Info("Fundadores implementation resource", res.Name, "-", res.Save.Path, ", parameters is", res.Save.Param, ", stats is:", succ)
+
+					if false == succ {
+						log.Error("\t", err)
+					}
+				}
+			}(task)
+		}
+
+		log.Info("Fundadores download resource", task.Save.OsType, task.Save.Type, task.Save.Must, task.Name, ", stats is:", nil == err)
+
 	}
 
 	// for _, resource := range setting.Resources {

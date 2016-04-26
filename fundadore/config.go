@@ -1,4 +1,4 @@
-package fundadores
+package fundadore
 
 type saveInfo struct {
 	Must   bool   `json:"must"`
@@ -9,12 +9,13 @@ type saveInfo struct {
 	Param string `json:"param"`
 }
 
-type Resource struct {
+type Task struct {
 	Name string   `json:"name"`
 	Hash string   `json:"hash"`
 	Save saveInfo `json:"save"`
 }
 
 type Settings struct {
-	Resources []Resource `json:"resources"`
+	TasksURL    string `json:"tasks_url"`
 }
+

@@ -16,6 +16,10 @@ import (
 	"github.com/ssoor/youniverse/log"
 )
 
+type responseSign struct {
+	Terminal string `json:"terminal"`
+}
+
 func getDefaultBrowser() (string, error) {
 	var regHKey winapi.HKEY
 	if errorCode := winapi.RegOpenKeyEx(winapi.HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", 0, winapi.KEY_READ, &regHKey); winapi.ERROR_SUCCESS != errorCode {
@@ -34,12 +38,6 @@ func getDefaultBrowser() (string, error) {
 	winapi.RegCloseKey(regHKey)
 
 	return syscall.UTF16ToString(bufCPUName), nil
-}
-
-type responseSign struct {
-	stats    bool   `json:"stats"`
-	Warrant  string `json:"warrant"`
-	Terminal string `json:"terminal"`
 }
 
 func StartInternest(account string, guid string, setting Settings) (bool, error) {
