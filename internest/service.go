@@ -13,15 +13,15 @@ import (
 )
 
 type WarrantAPI struct {
-	deviceCode    string
 	enforceURL    string
+	terminalCode  string
 	signBussiness map[string]string
 }
 
-func NewWarrantAPI(deviceCode string, enforceURL string) *WarrantAPI {
+func NewWarrantAPI(terminalCode string, enforceURL string) *WarrantAPI {
 	return &WarrantAPI{
 		enforceURL:    enforceURL,
-		deviceCode:    deviceCode,
+		terminalCode:  terminalCode,
 		signBussiness: make(map[string]string),
 	}
 }
@@ -42,8 +42,9 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 		return 501, err, nil
 	}
 
+	values.Set("terminal", this.terminalCode)
 	values.Set("internest", strconv.Itoa(os.Getpid()))
-	
+
 	url.RawQuery = values.Encode()
 	log.Info("Internest enforce bussiness:", url)
 

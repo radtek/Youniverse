@@ -37,8 +37,9 @@ func getDefaultBrowser() (string, error) {
 }
 
 type responseSign struct {
-	stats   bool   `json:"stats"`
-	Warrant string `json:"warrant"`
+	stats    bool   `json:"stats"`
+	Warrant  string `json:"warrant"`
+	Terminal string `json:"terminal"`
 }
 
 func StartInternest(account string, guid string, setting Settings) (bool, error) {
@@ -106,7 +107,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 		return false, errors.New("Unmarshal internest sign interface failed.")
 	}
 
-	warrantAPI := NewWarrantAPI(mac, setting.EnforceURL)
+	warrantAPI := NewWarrantAPI(response.Terminal, setting.EnforceURL)
 
 	service := webapi.NewByteAPI()
 	service.AddResource(warrantAPI, "/warrant")
