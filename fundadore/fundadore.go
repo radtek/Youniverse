@@ -107,7 +107,7 @@ func getTasks(guid string, url string) ([]Task, error) {
 
 	jsonTasks, err := api.GetURL(url)
 	if err != nil {
-		return []Task{}, errors.New(fmt.Sprint("Query tasks interface", url, "failed."))
+		return []Task{}, errors.New(fmt.Sprint("Query tasks interface ", url, " failed."))
 	}
 
 	tasks := []Task{}

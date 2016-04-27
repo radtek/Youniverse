@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -96,12 +97,12 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://younverse.ssoor.com/issued/settings/20160422/" + account + "/" + guid + ".settings"
+		url = "http://younverse.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	}
 
 	jsonConfig, err := api.GetURL(url)
 	if err != nil {
-		return config, errors.New("Query setting interface failed.")
+		return config, errors.New(fmt.Sprint("Query setting interface ", url, " failed."))
 	}
 
 	if err = json.Unmarshal([]byte(jsonConfig), &config); err != nil {
