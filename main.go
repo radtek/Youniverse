@@ -118,7 +118,7 @@ func main() {
 
 	flag.BoolVar(&debug, "debug", false, "Whether to start the debug mode")
 	flag.StringVar(&account, "account", "everyone", "user name, used to obtain user configuration")
-	flag.StringVar(&guid, "guid", "dbda2c80", "unique identifier, used to obtain user configuration")
+	flag.StringVar(&guid, "guid", "auto", "unique identifier, used to obtain user configuration")
 
 	flag.Parse()
 
