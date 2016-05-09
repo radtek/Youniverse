@@ -41,14 +41,22 @@ type SignalArgs struct {
 }
 
 type SignalReply struct {
-	Kay    string
+	Kay string
 }
 
-type Signal int
+type Signal struct {
+	GUID    string
+	Account string
+}
 
-func (t *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
+func (this *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 	if false == strings.EqualFold(args.Kay, YouiverseSinnalNotifyKey) {
 		return errors.New("Unauthorized access")
+	}
+
+	if false == strings.HasPrefix(this.GUID, "00000000_") { // ssoor 禁止退出，通知对方退出
+		reply.Kay = YouiverseSinnalNotifyKey
+		return nil
 	}
 
 	switch args.Signal {
@@ -68,8 +76,9 @@ func notifySignalExit() {
 	}
 
 	args := &SignalArgs{
-		Kay:    YouiverseSinnalNotifyKey,
 		Signal: SignalKill,
+
+		Kay: YouiverseSinnalNotifyKey,
 	}
 
 	reply := &SignalReply{}
@@ -77,7 +86,7 @@ func notifySignalExit() {
 	if err != nil {
 		log.Warning("Notify old youniverse exit error:", err)
 	}
-	
+
 	if strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
 		chanSignal <- os.Kill
 	}
@@ -85,8 +94,11 @@ func notifySignalExit() {
 	time.Sleep(2 * time.Second)
 }
 
-func startSignalNotify() {
-	rpcSignal := new(Signal)
+func startSignalNotify(account string, guid string) {
+	rpcSignal := &Signal{
+		GUID:    guid,
+		Account: account,
+	}
 
 	rpc.Register(rpcSignal)
 	rpc.HandleHTTP()
@@ -146,7 +158,7 @@ func main() {
 
 	notifySignalExit()
 
-	go startSignalNotify()
+	go startSignalNotify(account, guid)
 
 	defer log.Info("[MAIN] The Youniverse has finished running, exiting...")
 
