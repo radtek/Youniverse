@@ -40,9 +40,13 @@ type SignalArgs struct {
 	Signal int
 }
 
+type SignalReply struct {
+	Kay    string
+}
+
 type Signal int
 
-func (t *Signal) Notify(args *SignalArgs, reply *(string)) error {
+func (t *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 	if false == strings.EqualFold(args.Kay, YouiverseSinnalNotifyKey) {
 		return errors.New("Unauthorized access")
 	}
@@ -63,15 +67,19 @@ func notifySignalExit() {
 		return
 	}
 
-	var reply *string
 	args := &SignalArgs{
 		Kay:    YouiverseSinnalNotifyKey,
 		Signal: SignalKill,
 	}
 
+	reply := &SignalReply{}
 	err = client.Call("Signal.Notify", args, &reply)
 	if err != nil {
 		log.Warning("Notify old youniverse exit error:", err)
+	}
+	
+	if strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
+		chanSignal <- os.Kill
 	}
 
 	time.Sleep(2 * time.Second)

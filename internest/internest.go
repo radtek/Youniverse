@@ -24,7 +24,7 @@ func getDefaultBrowser() (string, error) {
 	var regHKey winapi.HKEY
 	if errorCode := winapi.RegOpenKeyEx(winapi.HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", 0, winapi.KEY_READ, &regHKey); winapi.ERROR_SUCCESS != errorCode {
 		if errorCode := winapi.RegOpenKeyEx(winapi.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", 0, winapi.KEY_READ, &regHKey); winapi.ERROR_SUCCESS != errorCode {
-			return "", errors.New("open url associations subkey failed")
+			return "IE.HTTP", nil // errors.New("open url associations subkey failed")
 		}
 	}
 
