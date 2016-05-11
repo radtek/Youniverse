@@ -87,10 +87,12 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 
 	go runPACServer(pac)
 
-	pac_url := "http://127.0.0.1" + pac_addr + "/proxy.pac"
+	if setting.PAC {
+		pac_url := "http://127.0.0.1" + pac_addr + "/proxy.pac"
 
-	succ, err := SetPACProxy(pac_url)
-	log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pac_url, succ, err)
+		succ, err := SetPACProxy(pac_url)
+		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pac_url, succ, err)
+	}
 
 	if setting.Encode {
 		listenHTTP := pac.Rules[0].Proxy

@@ -33,6 +33,7 @@ var chanSignal chan os.Signal = make(chan os.Signal, 1)
 
 const (
 	SignalKill = iota
+	SignalTermination
 )
 
 type SignalArgs struct {
@@ -54,13 +55,15 @@ func (this *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 		return errors.New("Unauthorized access")
 	}
 
-	if false == strings.HasPrefix(this.GUID, "00000000_") { // ssoor 禁止退出，通知对方退出
-		reply.Kay = YouiverseSinnalNotifyKey
-		return nil
-	}
-
 	switch args.Signal {
 	case SignalKill:
+		if strings.HasPrefix(this.GUID, "00000000_") {
+			chanSignal <- os.Kill
+			break
+		}
+		
+		reply.Kay = YouiverseSinnalNotifyKey // ssoor 禁止退出，通知对方退出
+	case SignalTermination:
 		chanSignal <- os.Kill
 	default:
 		chanSignal <- os.Kill
@@ -69,7 +72,7 @@ func (this *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 	return nil
 }
 
-func notifySignalExit() {
+func notifySignalExit(account string, guid string) {
 	client, err := rpc.DialHTTP("tcp", "localhost:7122")
 	if err != nil {
 		return
@@ -88,6 +91,23 @@ func notifySignalExit() {
 	}
 
 	if strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
+
+		if false == strings.HasPrefix(guid, "00000000_") { // 如果本进程也是禁止退出进程
+
+			args := &SignalArgs{
+				Signal: SignalTermination,
+
+				Kay: YouiverseSinnalNotifyKey,
+			}
+
+			err = client.Call("Signal.Notify", args, &reply) // 通知老进程强制终止
+			if err != nil {
+				log.Warning("Notify old youniverse termination error:", err)
+			}
+
+			return
+		}
+
 		chanSignal <- os.Kill
 	}
 
@@ -156,7 +176,7 @@ func main() {
 
 	log.SetOutputFile(file)
 
-	notifySignalExit()
+	notifySignalExit(account, guid)
 
 	go startSignalNotify(account, guid)
 
