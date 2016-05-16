@@ -37,8 +37,10 @@ const (
 )
 
 type SignalArgs struct {
-	Kay    string
+	Level  uint
 	Signal int
+
+	Kay string
 }
 
 type SignalReply struct {
@@ -46,39 +48,36 @@ type SignalReply struct {
 }
 
 type Signal struct {
-	GUID    string
-	Account string
+	Level uint
 }
 
-func (this *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
+func (s *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 	if false == strings.EqualFold(args.Kay, YouiverseSinnalNotifyKey) {
 		return errors.New("Unauthorized access")
 	}
 
 	switch args.Signal {
 	case SignalKill:
-		if strings.HasPrefix(this.GUID, "00000000_") {
-			chanSignal <- os.Kill
+		if s.Level > args.Level { // 运行级别高于通知方级别，不予退出，并通知对方退出
+			reply.Kay = YouiverseSinnalNotifyKey
 			break
 		}
-		
-		reply.Kay = YouiverseSinnalNotifyKey // ssoor 禁止退出，通知对方退出
-	case SignalTermination:
 		chanSignal <- os.Kill
-	default:
+	case SignalTermination:
 		chanSignal <- os.Kill
 	}
 
 	return nil
 }
 
-func notifySignalExit(account string, guid string) {
+func notifySignalExit(level uint) (bool, error) {
 	client, err := rpc.DialHTTP("tcp", "localhost:7122")
 	if err != nil {
-		return
+		return false, err
 	}
 
 	args := &SignalArgs{
+		Level:  level,
 		Signal: SignalKill,
 
 		Kay: YouiverseSinnalNotifyKey,
@@ -87,37 +86,45 @@ func notifySignalExit(account string, guid string) {
 	reply := &SignalReply{}
 	err = client.Call("Signal.Notify", args, &reply)
 	if err != nil {
-		log.Warning("Notify old youniverse exit error:", err)
+		return false, errors.New(fmt.Sprint("Notify old youniverse exit error:", err))
 	}
 
 	if strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
-
-		if false == strings.HasPrefix(guid, "00000000_") { // 如果本进程也是禁止退出进程
-
-			args := &SignalArgs{
-				Signal: SignalTermination,
-
-				Kay: YouiverseSinnalNotifyKey,
-			}
-
-			err = client.Call("Signal.Notify", args, &reply) // 通知老进程强制终止
-			if err != nil {
-				log.Warning("Notify old youniverse termination error:", err)
-			}
-
-			return
-		}
-
 		chanSignal <- os.Kill
 	}
 
 	time.Sleep(2 * time.Second)
+
+	return true, nil
 }
 
-func startSignalNotify(account string, guid string) {
+func notifySignalTerminate() (bool, error) {
+	client, err := rpc.DialHTTP("tcp", "localhost:7122")
+	if err != nil {
+		return false, err
+	}
+
+	args := &SignalArgs{
+		Level:  0,
+		Signal: SignalTermination,
+
+		Kay: YouiverseSinnalNotifyKey,
+	}
+
+	reply := &SignalReply{}
+	err = client.Call("Signal.Notify", args, &reply)
+	if err != nil {
+		return false, errors.New(fmt.Sprint("Notify old youniverse exit error:", err))
+	}
+
+	time.Sleep(2 * time.Second)
+
+	return true, nil
+}
+
+func startSignalNotify(level uint) {
 	rpcSignal := &Signal{
-		GUID:    guid,
-		Account: account,
+		Level: level,
 	}
 
 	rpc.Register(rpcSignal)
@@ -176,11 +183,18 @@ func main() {
 
 	log.SetOutputFile(file)
 
-	notifySignalExit(account, guid)
-
-	go startSignalNotify(account, guid)
-
 	defer log.Info("[MAIN] The Youniverse has finished running, exiting...")
+
+	if succ, err := notifySignalExit(0); false == succ {
+		log.Error("Notify old process exit failed:", err)
+		return
+	}
+
+	if strings.HasPrefix(guid, "00000000_") {
+		go startSignalNotify(0)
+	} else {
+		go startSignalNotify(1)
+	}
 
 	log.Info("[MAIN] Youniverse guid:", guid)
 	log.Info("[MAIN] Youniverse account name:", account)
