@@ -73,7 +73,7 @@ func (s *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 func notifySignalExit(level uint) (bool, error) {
 	client, err := rpc.DialHTTP("tcp", "localhost:7122")
 	if err != nil {
-		return false, err
+		return true, nil
 	}
 
 	args := &SignalArgs{
