@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 
-	"github.com/ssoor/youniverse/log"
 )
 
 const MaxHeaderSize = 4
@@ -68,7 +67,7 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 					this.needRead[2] = 'T'
 					this.needRead[3] = ' '
 
-					log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
+					//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
 				}
 			}
 		} else { //解密大小已获得,进入解密流程
