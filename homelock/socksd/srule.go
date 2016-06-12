@@ -96,7 +96,9 @@ func (this *SRules) ResolveJson(data []byte) (err error) {
 
 	for i := 0; i < len(jsonRules.SRules); i++ {
 		for j := 0; j < len(jsonRules.SRules[i].Compiler); j++ {
-			this.Add(jsonRules.SRules[i].Compiler[j])
+			if err := this.Add(jsonRules.SRules[i].Compiler[j]); nil != err {
+				return err
+			}
 		}
 	}
 
@@ -184,7 +186,7 @@ func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, res
 			resp = nil
 			tran = this.tranpoort_remote
 		} else {
-			log.Error("Socksd rewrite request",req.URL, "to", dsturl,"failed: Unauthorized jump, the host does not match")
+			log.Error("Socksd rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
 		}
 	}
 
@@ -233,7 +235,7 @@ func (this *SRules) Add(compiler JSONCompiler) (err error) {
 	}
 
 	for i := 0; i < len(compiler.Match); i++ {
-		log.Info("Sign up routing:",compiler.Type,compiler.Host, compiler.Match[i], err)
+		log.Info("Sign up routing:", compiler.Type, compiler.Host, compiler.Match[i], err)
 	}
 
 	return err

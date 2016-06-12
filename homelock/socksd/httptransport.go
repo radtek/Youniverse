@@ -1,22 +1,17 @@
 package socksd
 
 import (
-	"log"
 	"net"
 	"net/http"
-	"os"
-    
-    "github.com/ssoor/socks"
+
+	"github.com/ssoor/socks"
+	"github.com/ssoor/youniverse/log"
 )
 
 type HTTPTransport struct {
 	http.Transport
 
 	Rules *SRules
-}
-
-func init() {
-	log.SetOutput(os.Stdout)
 }
 
 func NewHTTPTransport(forward socks.Dialer, jsondata []byte) *HTTPTransport {
@@ -31,7 +26,7 @@ func NewHTTPTransport(forward socks.Dialer, jsondata []byte) *HTTPTransport {
 	}
 
 	if err := transport.Rules.ResolveJson(jsondata); nil != err {
-		log.Printf("Resolve json failed, err: %s\n", err)
+		log.Error("Transport resolve json rule failed, err:", err)
 	}
 
 	return transport
@@ -48,7 +43,7 @@ func (this *HTTPTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 	resp, err = tranpoort.RoundTrip(req)
 
 	if err != nil {
-		log.Printf("tranpoort round trip err: %s\n", err)
+		log.Error("tranpoort round trip err:", err)
 		return
 	}
 
