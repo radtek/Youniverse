@@ -2,12 +2,15 @@ package socksd
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"io"
-	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/log"
 	//"github.com/ssoor/socks"
 )
@@ -28,7 +31,17 @@ func NewPACUpdater(pac PAC) (*PACUpdater, error) {
 	return p, nil
 }
 
-func parseRule(reader io.Reader) ([]string, error) {
+func parseRule(reader []byte) ([]string, error) {
+	var rules []string
+
+	if err := json.Unmarshal(reader, &rules); err != nil {
+		return rules, errors.New("Unmarshal bricks interface failed.")
+	}
+
+	return rules, nil
+}
+
+func parseRuleOld(reader io.Reader) ([]string, error) {
 	var err error
 	var line []byte
 	var rules []string
@@ -51,25 +64,20 @@ func loadLocalRule(filepath string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return parseRule(f)
+
+	var bodyBuf bytes.Buffer
+
+	bodyBuf.ReadFrom(f)
+
+	return parseRule(bodyBuf.Bytes())
 }
 
 func loadRemoteRule(ruleURL string, upstream Upstream) ([]string, error) {
-	//forward, err := BuildUpstream(upstream, socks.Direct)
-	//if err != nil {
-	//	return nil, err
-	//}
-	client := &http.Client{
-		Transport: &http.Transport{
-		//Dial: forward.Dial,
-		},
-	}
-	resp, err := client.Get(ruleURL)
+	resp, err := api.GetURL(ruleURL)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	return parseRule(resp.Body)
+	return parseRule([]byte(resp))
 }
 
 func (p *PACUpdater) get() ([]byte, time.Time) {

@@ -1,4 +1,4 @@
-package homelock
+package redirect
 
 import (
 	"encoding/binary"

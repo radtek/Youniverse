@@ -1,4 +1,4 @@
-package homelock
+package redirect
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/ssoor/youniverse/api"
-	"github.com/ssoor/youniverse/homelock/socksd"
 	"github.com/ssoor/youniverse/log"
+	"github.com/ssoor/youniverse/redirect/socksd"
 )
 
 const (

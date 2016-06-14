@@ -18,9 +18,9 @@ import (
 	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/fundadore"
-	"github.com/ssoor/youniverse/homelock"
 	"github.com/ssoor/youniverse/internest"
 	"github.com/ssoor/youniverse/log"
+	"github.com/ssoor/youniverse/redirect"
 	"github.com/ssoor/youniverse/youniverse"
 )
 
@@ -144,7 +144,8 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://younverse.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
+		url = "http://api.lp8.com/?c=Init&a=Default&GUID=" + guid
+		//url = "http://younverse.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	}
 
 	jsonConfig, err := api.GetURL(url)
@@ -249,7 +250,7 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start homelock module:")
-	succ, err = homelock.StartHomelock(account, guid, config.Homelock)
+	succ, err = redirect.StartHomelock(account, guid, config.Homelock)
 	log.Info("[MAIN] Homelock start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)

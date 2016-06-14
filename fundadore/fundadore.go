@@ -38,7 +38,7 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 
 	dataHash := getMD5(data)
 	if false == strings.EqualFold(checkHash, dataHash) {
-		return 0, errors.New(fmt.Sprint("check", resourceKey, "hash[", checkHash, "] failed, Unexpected hash", dataHash))
+		return 0, errors.New(fmt.Sprint("check ", resourceKey, " hash [", checkHash, "] failed, Unexpected hash [", dataHash, "]"))
 	}
 
 	syscall.MoveFile(syscall.StringToUTF16Ptr(fileName), syscall.StringToUTF16Ptr(fileName+".del-"+fmt.Sprintf("%x", time.Now().UnixNano())))

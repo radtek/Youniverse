@@ -1,11 +1,11 @@
-package homelock
+package redirect
 
 import (
 	"errors"
 	"net"
 	"strconv"
 
-	. "github.com/ssoor/youniverse/homelock/socksd"
+	. "github.com/ssoor/youniverse/redirect/socksd"
 )
 
 var (
