@@ -119,7 +119,8 @@ func getTasks(guid string, url string) ([]Task, error) {
 }
 
 func StartFundadores(account string, guid string, setting Settings) (bool, error) {
-	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", common.GetCurrentDirectory())
+	curDir, _ := common.GetCurrentDirectory()
+	log.Info("Fundadores download starting, current arch is", runtime.GOARCH, ", dir is", curDir)
 
 	var downloadFailed bool = false
 

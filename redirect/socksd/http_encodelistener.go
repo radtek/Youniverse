@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/ssoor/youniverse/log"
 )
 
 const MaxHeaderSize = 4
@@ -31,11 +32,6 @@ type ECipherConn struct {
 }
 
 func (this *ECipherConn) getEncodeSize(encodeHeader []byte) (int, error) {
-
-	if 0xCD != encodeHeader[0] {
-		return 0, errors.New(fmt.Sprint("unrecognizable encryption header checksum: ", encodeHeader[0]))
-	}
-
 	if encodeHeader[3] != (encodeHeader[0] ^ (encodeHeader[1] + encodeHeader[2])) {
 		return 0, errors.New(fmt.Sprint("encryption header information check fails: ", encodeHeader[3], ",Unexpected value: ", (encodeHeader[0] ^ encodeHeader[1] + encodeHeader[2])))
 	}
@@ -55,17 +51,32 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 			if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil == err { // 检测数据包是否为加密包或者有效的 HTTP 包
 
 				this.needRead = this.decodeHead[:MaxHeaderSize] // 数据需要发送
-				//log.Info("HTTP read data", this.decodeHead, ", need data size is ", len(data))
 
+				//log.Info("HTTP read data", this.decodeHead, ", need data size is ", len(data))
 				if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
 					this.decodeSize = lenght
 					this.decodeCode = this.decodeHead[3]
 
 					this.isPass = false // 数据需要解密
-					this.needRead[0] = 'G'
-					this.needRead[1] = 'E'
-					this.needRead[2] = 'T'
-					this.needRead[3] = ' '
+					switch this.decodeHead[0] {
+					case 0xCD: // GET
+						this.needRead[0] = 'G'
+						this.needRead[1] = 'E'
+						this.needRead[2] = 'T'
+						this.needRead[3] = ' '
+					case 0xDC: // POST
+						this.needRead[0] = 'P'
+						this.needRead[1] = 'O'
+						this.needRead[2] = 'S'
+						this.needRead[3] = 'T'
+					case 0x00: // CONN
+						this.needRead[0] = 'C'
+						this.needRead[1] = 'O'
+						this.needRead[2] = 'N'
+						this.needRead[3] = 'N'
+					default:
+						log.Infof("Unknown socksd encode type: % 2x , encode len: %d\n", this.decodeHead[0], this.decodeSize)
+					}
 
 					//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
 				}
@@ -85,12 +96,6 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 			}
 
 			this.decodeSize -= lenght
-			//fmt.Print(string(data[:lenght]))
-
-			if 0 == this.decodeSize {
-				this.isPass = false // 数据解密完成
-			}
-
 			return
 		}
 
