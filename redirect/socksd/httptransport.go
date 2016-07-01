@@ -40,6 +40,7 @@ func (this *HTTPTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 		return resp, nil
 	}
 
+	req.Header.Del("X-Forwarded-For")
 	resp, err = tranpoort.RoundTrip(req)
 
 	if err != nil {
