@@ -121,7 +121,11 @@ func (this *SRules) ResolveRewriteHTML(req *http.Request, resp *http.Response) (
 
 	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
 
-		read, _ := gzip.NewReader(resp.Body)
+		read, err := gzip.NewReader(resp.Body)
+		if nil != err {
+			log.Info("Create gzip reader error:", err)
+			return nil
+		}
 
 		bodyReader = bufio.NewReader(read)
 
