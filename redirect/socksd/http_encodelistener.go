@@ -69,11 +69,31 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 						this.needRead[1] = 'O'
 						this.needRead[2] = 'S'
 						this.needRead[3] = 'T'
-					case 0x00: // CONN
+					case 0x00: // CONNNECT
 						this.needRead[0] = 'C'
 						this.needRead[1] = 'O'
 						this.needRead[2] = 'N'
 						this.needRead[3] = 'N'
+					case 0xF0: // PUT
+						this.needRead[0] = 'P'
+						this.needRead[1] = 'U'
+						this.needRead[2] = 'T'
+						this.needRead[3] = ' '
+					case 0xF1: // HEAD
+						this.needRead[0] = 'H'
+						this.needRead[1] = 'E'
+						this.needRead[2] = 'A'
+						this.needRead[3] = 'D'
+					case 0xF2: // TRACE
+						this.needRead[0] = 'T'
+						this.needRead[1] = 'R'
+						this.needRead[2] = 'A'
+						this.needRead[3] = 'C'
+					case 0xF3: // DELECT
+						this.needRead[0] = 'D'
+						this.needRead[1] = 'E'
+						this.needRead[2] = 'L'
+						this.needRead[3] = 'E'
 					default:
 						log.Infof("Unknown socksd encode type: % 2x , encode len: %d\n", this.decodeHead[0], this.decodeSize)
 					}
