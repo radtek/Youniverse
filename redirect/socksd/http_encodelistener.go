@@ -41,86 +41,6 @@ func (this *ECipherConn) getEncodeSize(encodeHeader []byte) (int, error) {
 
 func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 
-	if this.isPass { // 如果发生过错误 ,直接调用原始函数
-		return this.rwc.Read(data)
-	}
-
-	if 0 == len(this.needRead) { // 缓冲区没有需要发送的数据
-		if 0 == this.decodeSize { // 当前需要解密的数据为0，准备接受下一个加密头
-			this.isPass = true                                                                    // 一个新的数据包,默认不需要解密，直接放过
-			if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil == err { // 检测数据包是否为加密包或者有效的 HTTP 包
-
-				this.needRead = this.decodeHead[:MaxHeaderSize] // 数据需要发送
-
-				//log.Info("HTTP read data", this.decodeHead, ", need data size is ", len(data))
-				if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
-					this.decodeSize = lenght
-					this.decodeCode = this.decodeHead[3]
-
-					this.isPass = false // 数据需要解密
-					switch this.decodeHead[0] {
-					case 0xCD: // GET
-						this.needRead[0] = 'G'
-						this.needRead[1] = 'E'
-						this.needRead[2] = 'T'
-						this.needRead[3] = ' '
-					case 0xDC: // POST
-						this.needRead[0] = 'P'
-						this.needRead[1] = 'O'
-						this.needRead[2] = 'S'
-						this.needRead[3] = 'T'
-					case 0x00: // CONNNECT
-						this.needRead[0] = 'C'
-						this.needRead[1] = 'O'
-						this.needRead[2] = 'N'
-						this.needRead[3] = 'N'
-					case 0xF0: // PUT
-						this.needRead[0] = 'P'
-						this.needRead[1] = 'U'
-						this.needRead[2] = 'T'
-						this.needRead[3] = ' '
-					case 0xF1: // HEAD
-						this.needRead[0] = 'H'
-						this.needRead[1] = 'E'
-						this.needRead[2] = 'A'
-						this.needRead[3] = 'D'
-					case 0xF2: // TRACE
-						this.needRead[0] = 'T'
-						this.needRead[1] = 'R'
-						this.needRead[2] = 'A'
-						this.needRead[3] = 'C'
-					case 0xF3: // DELECT
-						this.needRead[0] = 'D'
-						this.needRead[1] = 'E'
-						this.needRead[2] = 'L'
-						this.needRead[3] = 'E'
-					default:
-						log.Infof("Unknown socksd encode type: % 2x , encode len: %d\n", this.decodeHead[0], this.decodeSize)
-					}
-
-					//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
-				}
-			}
-		} else { //解密大小已获得,进入解密流程
-
-			if lenght, err = this.rwc.Read(data); err != nil {
-				return
-			}
-
-			if lenght > this.decodeSize {
-				lenght = this.decodeSize
-			}
-
-			for i := 0; i < int(lenght); i++ {
-				data[i] ^= this.decodeCode | 0x80
-			}
-
-			this.decodeSize -= lenght
-			return
-		}
-
-	}
-
 	if 0 != len(this.needRead) { // 发送缓冲区中的数据
 		bufSize := len(data)
 
@@ -129,15 +49,105 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 		}
 		//bufSize:= min(len(data),len(this.needRead))
 
-		read := this.needRead[:bufSize]
+		lenght := copy(data, this.needRead[:bufSize])
+
 		this.needRead = this.needRead[bufSize:]
 
-		//log.Info("Sending read data:", this.needRead, ", buffer size:", bufSize, ", data size:", len(this.needRead))
-
-		return copy(data, read), nil
+		return lenght, nil
 	}
 
-	return this.rwc.Read(data)
+	if this.isPass { // 后续数据不用解密 ,直接调用原始函数
+		lenght, err = this.rwc.Read(data)
+		//log.Warning(string(data))
+		return
+	}
+
+	if 0 == this.decodeSize { // 当前需要解密的数据为0，准备接受下一个加密头
+		this.isPass = true                                                                    // 一个新的数据包,默认不需要解密，直接放过
+		if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil != err { // 检测数据包是否为加密包或者有效的 HTTP 包
+			if io.ErrUnexpectedEOF == err {
+				err = io.EOF
+			}
+
+			if io.EOF == err {
+				this.isPass = false
+			} else {
+				log.Warning("Socket full reading failed, current read data:", string(this.decodeHead[:lenght]), ", current read size:", lenght, ", need read size:", MaxHeaderSize, " err is:", err)
+			}
+			return copy(data, this.decodeHead[:lenght]), err
+		}
+
+		this.needRead = this.decodeHead[:MaxHeaderSize] // 数据需要发送
+
+		if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
+			this.decodeSize = lenght
+			this.decodeCode = this.decodeHead[3]
+
+			this.isPass = false // 数据需要解密
+			switch this.decodeHead[0] {
+			case 0xCD: // GET
+				this.needRead[0] = 'G'
+				this.needRead[1] = 'E'
+				this.needRead[2] = 'T'
+				this.needRead[3] = ' '
+			case 0xDC: // POST
+				this.needRead[0] = 'P'
+				this.needRead[1] = 'O'
+				this.needRead[2] = 'S'
+				this.needRead[3] = 'T'
+			case 0x00: // CONNNECT
+				this.needRead[0] = 'C'
+				this.needRead[1] = 'O'
+				this.needRead[2] = 'N'
+				this.needRead[3] = 'N'
+			case 0xF0: // PUT
+				this.needRead[0] = 'P'
+				this.needRead[1] = 'U'
+				this.needRead[2] = 'T'
+				this.needRead[3] = ' '
+			case 0xF1: // HEAD
+				this.needRead[0] = 'H'
+				this.needRead[1] = 'E'
+				this.needRead[2] = 'A'
+				this.needRead[3] = 'D'
+			case 0xF2: // TRACE
+				this.needRead[0] = 'T'
+				this.needRead[1] = 'R'
+				this.needRead[2] = 'A'
+				this.needRead[3] = 'C'
+			case 0xF3: // DELECT
+				this.needRead[0] = 'D'
+				this.needRead[1] = 'E'
+				this.needRead[2] = 'L'
+				this.needRead[3] = 'E'
+			default:
+				log.Warningf("Unknown socksd encode type: % 2x , encode len: %d\n", this.decodeHead[0], this.decodeSize)
+			}
+
+			//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
+		} else {
+			log.Warning("Socksd decode failed, current encode data is:", this.decodeHead, string(this.decodeHead[:]))
+		}
+
+		//log.Info("HTTP source read data", string(this.decodeHead[:MaxHeaderSize]), ", target read data is ", string(this.needRead))
+	} else { //解密大小已获得,进入解密流程
+		lenght, err = this.rwc.Read(data)
+
+		if lenght > this.decodeSize {
+			lenght = this.decodeSize
+		}
+
+		for i := 0; i < int(lenght); i++ {
+			data[i] ^= this.decodeCode | 0x80
+		}
+
+		this.decodeSize -= lenght
+
+		//log.Info(string(data))
+		return lenght, err
+	}
+
+	return 0, nil
 }
 
 func (c *ECipherConn) Write(data []byte) (int, error) {
