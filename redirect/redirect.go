@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/redirect/socksd"
 )
@@ -53,7 +54,13 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 
 	log.Info("Set messenger encode mode:", setting.Encode)
 
-	proxie, err := CreateSocksdProxy(account, "127.0.0.1", setting.Services)
+	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
+	if err != nil {
+		log.Error("Query connection ip failed:", err)
+		return false, ErrorStartEncodeModule
+	}
+
+	proxie, err := CreateSocksdProxy(account, "0.0.0.0", setting.Services)
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
@@ -88,7 +95,7 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 	go runPACServer(pac)
 
 	if setting.PAC {
-		pac_url := "http://127.0.0.1" + pac_addr + "/proxy.pac"
+		pac_url := "http://" + connInternalIP + pac_addr + "/proxy.pac"
 
 		succ, err := SetPACProxy(pac_url)
 		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pac_url, succ, err)
@@ -101,8 +108,9 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 			log.Warning("Parse encode port failed, err:", err)
 			return true, ErrorStartEncodeModule
 		}
-		pacAddr := SocketCreateSockAddr("127.0.0.1", uint16(PACListenPort))
-		encodeAddr := SocketCreateSockAddr("127.0.0.1", uint16(encodeport))
+
+		pacAddr := SocketCreateSockAddr(connInternalIP, uint16(PACListenPort))
+		encodeAddr := SocketCreateSockAddr(connInternalIP, uint16(encodeport))
 
 		if err := LoadDLL(); err != nil {
 			log.Info("Init business module failed:", err)
