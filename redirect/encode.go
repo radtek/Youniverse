@@ -55,7 +55,7 @@ func UnoadDLL() {
 func SocketCreateSockAddr(host string, port uint16) (addrSocket SOCKADDR_IN) {
 	binary.BigEndian.PutUint16(addrSocket.sin_port[0:], port)
 
-	ipv4 := net.ParseIP("127.0.0.1")
+	ipv4 := net.ParseIP(host)
 
 	ipv4 = ipv4.To4()
 	buff := make([]byte, 0)
