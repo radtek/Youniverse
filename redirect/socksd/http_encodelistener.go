@@ -58,6 +58,7 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 	}
 
 	if econn.isPass { // 后续数据不用解密 ,直接调用原始函数 - isPass 由 readDecodeHeader() 函数设置
+		econn.isPass = false
 		lenght, err = econn.rwc.Read(data)
 		//log.Warning(string(data[:lenght]))
 		return
@@ -106,10 +107,10 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 	this.sendHeader = this.decodeHead[:MaxHeaderSize] // 数据需要发送
 
 	if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
+		this.isPass = false // 数据需要解密
 		this.decodeSize = lenght
 		this.decodeCode = this.decodeHead[3]
 
-		this.isPass = false // 数据需要解密
 		switch this.decodeHead[0] {
 		case 0xCD: // GET
 			this.sendHeader[0] = 'G'
