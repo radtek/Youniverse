@@ -58,7 +58,7 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 
 	if this.isPass { // 后续数据不用解密 ,直接调用原始函数
 		lenght, err = this.rwc.Read(data)
-		//log.Warning(string(data))
+		//log.Warning(string(data[:lenght]))
 		return
 	}
 
@@ -129,7 +129,7 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 			log.Warning("Socksd decode failed, current encode data is:", this.decodeHead, string(this.decodeHead[:]))
 		}
 
-		//log.Info("HTTP source read data", string(this.decodeHead[:MaxHeaderSize]), ", target read data is ", string(this.needRead))
+		//log.Info("Socksd target read data is ", string(this.needRead))
 	} else { //解密大小已获得,进入解密流程
 		lenght, err = this.rwc.Read(data)
 
@@ -143,7 +143,7 @@ func (this *ECipherConn) Read(data []byte) (lenght int, err error) {
 
 		this.decodeSize -= lenght
 
-		//log.Info(string(data))
+		//log.Info(string(data[:lenght]))
 		return lenght, err
 	}
 
