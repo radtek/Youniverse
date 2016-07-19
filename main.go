@@ -144,8 +144,8 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://api.lp8.com/?c=Init&a=Default&GUID=" + guid
-		//url = "http://younverse.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
+		//url = "http://api.lp8.com/Init/Default/GUID/" + guid
+		url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
 
 	jsonConfig, err := api.GetURL(url)
