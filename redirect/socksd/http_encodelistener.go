@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 )
 
@@ -24,11 +25,11 @@ type ECipherConn struct {
 	rwc io.ReadWriteCloser
 
 	isPass     bool
-	sendHeader []byte
+	beforeSend []byte
 
 	decodeSize int
 	decodeCode byte
-	decodeHead [MaxHeaderSize]byte
+	headBuffer [MaxHeaderSize]byte
 }
 
 func (this *ECipherConn) getEncodeSize(encodeHeader []byte) (int, error) {
@@ -42,17 +43,17 @@ func (this *ECipherConn) getEncodeSize(encodeHeader []byte) (int, error) {
 func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 	var decodeSize int
 
-	if 0 != len(econn.sendHeader) { // 发送缓冲区中的数据
+	if 0 != len(econn.beforeSend) { // 发送缓冲区中的数据
 		bufSize := len(data)
 
-		if bufSize > len(econn.sendHeader) {
-			bufSize = len(econn.sendHeader)
+		if bufSize > len(econn.beforeSend) {
+			bufSize = len(econn.beforeSend)
 		}
 
 		err = nil
-		lenght = copy(data, econn.sendHeader[:bufSize])
+		lenght = copy(data, econn.beforeSend[:bufSize])
 
-		econn.sendHeader = econn.sendHeader[bufSize:]
+		econn.beforeSend = econn.beforeSend[bufSize:]
 		//log.Info("Socksd header data is ", string(data[:lenght]))
 		return
 	}
@@ -60,7 +61,7 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 	if econn.isPass { // 后续数据不用解密 ,直接调用原始函数 - isPass 由 readDecodeHeader() 函数设置
 		econn.isPass = false
 		lenght, err = econn.rwc.Read(data)
-		//log.Warning(string(data[:lenght]))
+		log.Warningf("%s%s", common.GetValidString(econn.headBuffer[:]), string(data[:lenght]))
 		return
 	}
 
@@ -70,7 +71,7 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 		decodeSize, err = econn.rwc.Read(data)
 	}
 
-	if 0 != decodeSize {
+	if nil == err && 0 != decodeSize {
 		lenght = decodeSize // 填充返回数据长度
 
 		if decodeSize > econn.decodeSize {
@@ -88,10 +89,56 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 	return
 }
 
-func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
-	this.isPass = true // 一个新的数据包,默认不需要解密，直接放过
+// 加密类型
+const (
+	HeaderGet     = 0xCD
+	HeaderPost    = 0xDC
+	HeaderConnect = 0x00
 
-	if lenght, err = io.ReadFull(this.rwc, this.decodeHead[:MaxHeaderSize]); nil != err { // 检测数据包是否为加密包或者有效的 HTTP 包
+	HeaderPut    = 0xF0
+	HeaderHead   = 0xF1
+	HanderTrace  = 0xF2
+	HanderDelect = 0xF3
+)
+
+func (econn *ECipherConn) isDecodeHeader(data byte) bool {
+	switch data {
+	case HeaderGet: // GET
+	case HeaderPost: // POST
+	case HeaderConnect: // CONNNECT
+	case HeaderPut: // PUT
+	case HeaderHead: // HEAD
+	case HanderTrace: // TRACE
+	case HanderDelect: // DELECT
+	default:
+		return false
+	}
+
+	return true
+}
+
+func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
+	this.headBuffer[0] = 0
+	this.headBuffer[1] = 0
+	this.headBuffer[2] = 0
+	this.headBuffer[3] = 0
+
+	if lenght, err = this.rwc.Read(this.headBuffer[:1]); 1 != lenght {
+		return
+	}
+
+	this.isPass = true // 一个新的数据包,默认不需要解密，直接放过
+	if false == this.isDecodeHeader(this.headBuffer[0]) {
+		this.beforeSend = this.headBuffer[:1] // 数据需要发送
+
+		log.Warning("Socket decode check failed, current encode type is", this.headBuffer[0])
+		return 0, nil
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////
+	//
+
+	if lenght, err = io.ReadFull(this.rwc, this.headBuffer[1:]); nil != err { // 检测数据包是否为加密包或者有效的 HTTP 包
 		if io.ErrUnexpectedEOF == err {
 			err = io.EOF
 		}
@@ -99,61 +146,61 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 		if io.EOF == err {
 			this.isPass = false
 		} else {
-			log.Warning("Socket full reading failed, current read data:", string(this.decodeHead[:lenght]), "(", lenght, "), need read size:", MaxHeaderSize, " err is:", err)
+			log.Warning("Socket full reading failed, current read data:", string(this.headBuffer[:lenght]), "(", lenght, "), need read size:", MaxHeaderSize, " err is:", err)
 		}
-		return copy(data, this.decodeHead[:lenght]), err
+		return copy(data, this.headBuffer[:lenght]), err
 	}
 
-	this.sendHeader = this.decodeHead[:MaxHeaderSize] // 数据需要发送
+	this.beforeSend = this.headBuffer[:MaxHeaderSize] // make([]byte, MaxHeaderSize) // 数据需要发送
 
-	if lenght, err = this.getEncodeSize(this.decodeHead[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
+	if lenght, err = this.getEncodeSize(this.headBuffer[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
 		this.isPass = false // 数据需要解密
 		this.decodeSize = lenght
-		this.decodeCode = this.decodeHead[3]
+		this.decodeCode = this.headBuffer[3]
 
-		switch this.decodeHead[0] {
-		case 0xCD: // GET
-			this.sendHeader[0] = 'G'
-			this.sendHeader[1] = 'E'
-			this.sendHeader[2] = 'T'
-			this.sendHeader[3] = ' '
-		case 0xDC: // POST
-			this.sendHeader[0] = 'P'
-			this.sendHeader[1] = 'O'
-			this.sendHeader[2] = 'S'
-			this.sendHeader[3] = 'T'
-		case 0x00: // CONNNECT
-			this.sendHeader[0] = 'C'
-			this.sendHeader[1] = 'O'
-			this.sendHeader[2] = 'N'
-			this.sendHeader[3] = 'N'
-		case 0xF0: // PUT
-			this.sendHeader[0] = 'P'
-			this.sendHeader[1] = 'U'
-			this.sendHeader[2] = 'T'
-			this.sendHeader[3] = ' '
-		case 0xF1: // HEAD
-			this.sendHeader[0] = 'H'
-			this.sendHeader[1] = 'E'
-			this.sendHeader[2] = 'A'
-			this.sendHeader[3] = 'D'
-		case 0xF2: // TRACE
-			this.sendHeader[0] = 'T'
-			this.sendHeader[1] = 'R'
-			this.sendHeader[2] = 'A'
-			this.sendHeader[3] = 'C'
-		case 0xF3: // DELECT
-			this.sendHeader[0] = 'D'
-			this.sendHeader[1] = 'E'
-			this.sendHeader[2] = 'L'
-			this.sendHeader[3] = 'E'
+		switch this.headBuffer[0] {
+		case HeaderGet: // GET
+			this.beforeSend[0] = 'G'
+			this.beforeSend[1] = 'E'
+			this.beforeSend[2] = 'T'
+			this.beforeSend[3] = ' '
+		case HeaderPost: // POST
+			this.beforeSend[0] = 'P'
+			this.beforeSend[1] = 'O'
+			this.beforeSend[2] = 'S'
+			this.beforeSend[3] = 'T'
+		case HeaderConnect: // CONNNECT
+			this.beforeSend[0] = 'C'
+			this.beforeSend[1] = 'O'
+			this.beforeSend[2] = 'N'
+			this.beforeSend[3] = 'N'
+		case HeaderPut: // PUT
+			this.beforeSend[0] = 'P'
+			this.beforeSend[1] = 'U'
+			this.beforeSend[2] = 'T'
+			this.beforeSend[3] = ' '
+		case HeaderHead: // HEAD
+			this.beforeSend[0] = 'H'
+			this.beforeSend[1] = 'E'
+			this.beforeSend[2] = 'A'
+			this.beforeSend[3] = 'D'
+		case HanderTrace: // TRACE
+			this.beforeSend[0] = 'T'
+			this.beforeSend[1] = 'R'
+			this.beforeSend[2] = 'A'
+			this.beforeSend[3] = 'C'
+		case HanderDelect: // DELECT
+			this.beforeSend[0] = 'D'
+			this.beforeSend[1] = 'E'
+			this.beforeSend[2] = 'L'
+			this.beforeSend[3] = 'E'
 		default:
-			log.Warningf("Unknown socksd encode type: % 2x , encode len: %d\n", this.decodeHead[0], this.decodeSize)
+			log.Warningf("Unknown socksd encode type: % 2x , encode len: %d\n", this.headBuffer[0], this.decodeSize)
 		}
 
 		//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
 	} else {
-		log.Warning("Socksd decode failed, current encode data is:", this.decodeHead, string(this.decodeHead[:]))
+		log.Warning("Socksd decode failed, current encode data is:", this.headBuffer, string(this.headBuffer[:]))
 	}
 
 	return 0, nil
@@ -185,7 +232,7 @@ func (this *LPListener) Accept() (c net.Conn, err error) {
 		rwc:  conn,
 
 		isPass:     false,
-		sendHeader: nil,
+		beforeSend: nil,
 	}, nil
 }
 
