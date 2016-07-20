@@ -27,7 +27,7 @@ type SOCKADDR_IN struct {
 
 func LoadDLL() error {
 	// Library
-	libhttpredirect, err := syscall.LoadLibrary("dnsepi.dll")
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
 	if err != nil {
 		return errors.New(fmt.Sprint("Load libaray filed:", err))
 	}
