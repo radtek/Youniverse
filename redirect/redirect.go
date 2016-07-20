@@ -34,7 +34,7 @@ func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
 			socksd.StartHTTPProxy(proxie, router, []byte(srules))
 		}
 		waitTime += waitTime * 0.618
-		log.Warning("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		log.Warning("Start proxy unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
 	}
 }
@@ -45,7 +45,7 @@ func runPACServer(pac *socksd.PAC) {
 	for {
 		socksd.StartPACServer(*pac)
 		waitTime += waitTime * 0.618
-		log.Warning("Unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		log.Warning("Start PAC server unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
 	}
 }
@@ -60,7 +60,7 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 		return false, ErrorStartEncodeModule
 	}
 
-	proxie, err := CreateSocksdProxy(account, "0.0.0.0", setting.Services)
+	proxie, err := CreateSocksdProxy(account, "", setting.Services)
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
@@ -113,12 +113,12 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 		encodeAddr := SocketCreateSockAddr(connInternalIP, uint16(encodeport))
 
 		if err := LoadDLL(); err != nil {
-			log.Info("Init business module failed:", err)
+			log.Warning("Init redirect module failed:", err)
 			return true, ErrorStartEncodeModule
 		}
 
 		handle := SetBusinessData(pacAddr, encodeAddr)
-		log.Info("Setting business data share handle:", handle)
+		log.Info("Setting redirect data share handle:", handle)
 	}
 
 	return true, nil

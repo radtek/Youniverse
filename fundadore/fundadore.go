@@ -133,10 +133,9 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 		task.Save.Path = os.ExpandEnv(task.Save.Path)
 
 		var err error
-		var fileSize int
 
 		if strings.EqualFold(task.Save.OsType, runtime.GOARCH) {
-			fileSize, err = downloadResourceToFile(task.Name, task.Hash, task.Save.Path)
+			_, err = downloadResourceToFile(task.Name, task.Hash, task.Save.Path)
 
 			if nil != err { // 由于先判断的错误，这里 contiune 后下面代码就不会注册执行回调
 				if true == task.Save.Must {
@@ -144,39 +143,30 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 					return false, err
 				}
 
-				log.Error("\t", err)
 				continue
 			}
-
-			log.Info("\tdownload success, resource size is", fileSize)
 
 			defer func(res Task) { // 执行函数
 				if false == downloadFailed { // 如果下载没有失败的话, 启动
 					succ, err := implementationResource(res.Save.Type, res.Save.Path, res.Save.Param)
 
-					log.Info("Fundadores implementation resource", res.Name, "-", res.Save.Path, ", parameters is", res.Save.Param, ", stats is:", succ)
+					log.Info("Fundadores implementation resource", res.Name, fmt.Sprintf("(%s)", res.Save.Type), ", stats is:", succ)
+					log.Info("\tPath is", res.Save.Path, ", parameters is", res.Save.Param)
 
 					if false == succ {
-						log.Error("\t", err)
+						log.Warning("\tImplementation execute error:", err)
 					}
 				}
 			}(task)
 		}
 
-		log.Info("Fundadores download resource", task.Save.OsType, task.Save.Type, task.Save.Must, task.Name, ", stats is:", nil == err)
+		log.Info("Fundadores download resource", task.Save.OsType, task.Name, fmt.Sprintf("(%s)", task.Save.Type), "-", task.Save.Path, ", stats is:", nil == err)
+
+		if nil != err {
+			log.Warning("\tDownload error:", err)
+		}
 
 	}
-
-	// for _, resource := range setting.Resources {
-	// 	resource.Save.Path = os.ExpandEnv(resource.Save.Path)
-	// 	succ, err := implementationResource(resource.Save.Type, resource.Save.Path, resource.Save.Param)
-
-	// 	log.Info("Fundadores implementation resource", resource.Name, "-", resource.Save.Path, ", parameters is", resource.Save.Param, ", stats is:", succ)
-
-	// 	if false == succ {
-	// 		log.Error("\t", err)
-	// 	}
-	// }
 
 	log.Info("Youniverse stats info:")
 
