@@ -3,13 +3,14 @@ package api
 import (
 	"crypto/aes"
 	"crypto/cipher"
-    "encoding/base64"
-    "encoding/json"
-    
-    "bytes"
-    "net/http"
-)
+	"encoding/base64"
+	"encoding/json"
 
+	"github.com/ssoor/youniverse/common"
+
+	"bytes"
+	"net/http"
+)
 
 func Decrypt(base64Code []byte) (decode []byte, err error) {
 	type encodeStruct struct {
@@ -61,21 +62,8 @@ func Decrypt(base64Code []byte) (decode []byte, err error) {
 	return code, nil
 }
 
-func GetValidString(src []byte) string {
-	var str_buf []byte
-    
-	for _, v := range src {
-		if v != 0 {
-			str_buf = append(str_buf, v)
-		}
-	}
-    
-	return string(str_buf)
-}
-
-
 func GetURL(srcurl string) (string, error) {
-    var data []byte
+	var data []byte
 	resp, err := http.Get(srcurl)
 
 	if nil != err {
@@ -94,5 +82,5 @@ func GetURL(srcurl string) (string, error) {
 		return "", err
 	}
 
-	return GetValidString(data), nil
+	return common.GetValidString(data), nil
 }

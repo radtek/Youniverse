@@ -16,6 +16,18 @@ func Substr(s string, pos, length int) string {
 	return string(runes[pos:l])
 }
 
+func GetValidString(src []byte) string {
+	var str_buf []byte
+
+	for _, v := range src {
+		if v != 0 {
+			str_buf = append(str_buf, v)
+		}
+	}
+
+	return string(str_buf)
+}
+
 func GetParentDirectory(dirctory string) string {
 	return Substr(dirctory, 0, strings.LastIndex(dirctory, "/"))
 }
