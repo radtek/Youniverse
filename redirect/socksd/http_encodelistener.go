@@ -146,7 +146,7 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 		if io.EOF == err {
 			this.isPass = false
 		} else {
-			log.Warning("Socket full reading failed, current read data:", string(this.headBuffer[:lenght]), "(", lenght, "), need read size:", MaxHeaderSize, " err is:", err)
+			log.Warning("Socket full reading failed, current read data:", string(this.headBuffer[:1+lenght]), "(", 1+lenght, "), need read size:", MaxHeaderSize, " err is:", err)
 		}
 		return copy(data, this.headBuffer[:lenght]), err
 	}
