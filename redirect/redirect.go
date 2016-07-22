@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ssoor/youniverse/api"
-	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/redirect/socksd"
 )
@@ -54,13 +53,15 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 
 	log.Info("Set messenger encode mode:", setting.Encode)
 
-	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
+	var err error = nil
+	var connInternalIP string = "127.0.0.1"
+	//connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
 	if err != nil {
 		log.Error("Query connection ip failed:", err)
 		return false, ErrorStartEncodeModule
 	}
 
-	proxie, err := CreateSocksdProxy(account, "", setting.Services)
+	proxie, err := CreateSocksdProxy(account, connInternalIP, setting.Services)
 
 	if err != nil {
 		log.Error("Create messenger angel config failed, err:", err)
