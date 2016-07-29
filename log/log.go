@@ -15,6 +15,9 @@ var (
 )
 
 func init() {
+	Out = New(os.Stdout, "INFO ", LstdFlags)
+	Err = New(os.Stdout, "ERROR ", LstdFlags)
+	Warn = New(os.Stdout, "WARN ", LstdFlags)
 }
 
 func SetOutputFile(file *os.File) {
@@ -26,7 +29,7 @@ func SetOutputFile(file *os.File) {
 	logWriters := io.MultiWriter(writers...)
 
 	Out = New(logWriters, "INFO ", LstdFlags)
-	Err = New(logWriters, "ERR  ", LstdFlags)
+	Err = New(logWriters, "ERROR ", LstdFlags)
 	Warn = New(logWriters, "WARN ", LstdFlags)
 }
 
