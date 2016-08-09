@@ -34,7 +34,7 @@ func getPeers(guid string, url string, peer_addr string) ([]string, error) {
 
 	json_peers, err := api.GetURL(url)
 	if err != nil {
-		return []string{}, errors.New(fmt.Sprint("Query peers interface", url, "failed."))
+		return []string{}, errors.New(fmt.Sprint("Query peers interface failed, err: ", err))
 	}
 
 	peers := []string{}

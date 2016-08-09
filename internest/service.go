@@ -50,7 +50,7 @@ func (this WarrantAPI) Get(values webapi.Values, request *http.Request) (int, in
 
 	json_sign, err := api.GetURL(url.String())
 	if err != nil {
-		return 501, errors.New("Query internest enforce interface failed."), nil
+		return 501, errors.New("Query internest enforce interface failed, err: " + err.Error()), nil
 	}
 
 	this.signBussiness[bussinessType] = json_sign

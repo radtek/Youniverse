@@ -62,11 +62,16 @@ func Decrypt(base64Code []byte) (decode []byte, err error) {
 	return code, nil
 }
 
-func GetURL(srcurl string) (string, error) {
+func GetURL(srcurl string) (decodeData string, err error) {
 	var data []byte
-	resp, err := http.Get(srcurl)
 
-	if nil != err {
+	var resp *http.Response
+	for i := 0; i < 3; i++ {
+		if resp, err = http.Get(srcurl); nil != err {
+			continue
+		}
+	}
+	if err != nil {
 		return "", err
 	}
 
@@ -77,10 +82,10 @@ func GetURL(srcurl string) (string, error) {
 	bodyBuf.ReadFrom(resp.Body)
 
 	data, err = Decrypt(bodyBuf.Bytes())
-
 	if err != nil {
 		return "", err
 	}
 
+	//log.Info("API <", srcurl, ">", common.GetValidString(data))
 	return common.GetValidString(data), nil
 }

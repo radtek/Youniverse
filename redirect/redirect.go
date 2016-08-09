@@ -79,7 +79,7 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 
 	srules, err := api.GetURL(setting.RulesURL)
 	if err != nil {
-		log.Errorf("Query srules: %s failed, err: %s\n", setting.RulesURL, err)
+		log.Errorf("Query srules interface failed, err: %s\n", err)
 		return false, ErrorSettingQuery
 	}
 

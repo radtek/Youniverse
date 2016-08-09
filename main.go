@@ -144,13 +144,14 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
+		//url = "http://api.lp8.com/Init/Default/GUID/" + guid
 		url = "http://api.ieceo.cn/Init/Default/GUID/" + guid
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
 
 	jsonConfig, err := api.GetURL(url)
 	if err != nil {
-		return config, errors.New(fmt.Sprint("Query setting interface ", url, " failed."))
+		return config, errors.New(fmt.Sprint("Query setting interface failed, err: ", err))
 	}
 
 	if err = json.Unmarshal([]byte(jsonConfig), &config); err != nil {
