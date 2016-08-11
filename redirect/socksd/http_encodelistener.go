@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 
-	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 )
 
@@ -41,7 +40,6 @@ func (this *ECipherConn) getEncodeSize(encodeHeader []byte) (int, error) {
 }
 
 func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
-	var decodeSize int
 
 	if 0 != len(econn.beforeSend) { // 发送缓冲区中的数据
 		bufSize := len(data)
@@ -54,39 +52,47 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 		lenght = copy(data, econn.beforeSend[:bufSize])
 
 		econn.beforeSend = econn.beforeSend[bufSize:]
+
+		//log.Info(string(data[:lenght]))
 		//log.Info("Socksd header data is ", string(data[:lenght]))
 		return
 	}
 
 	if econn.isPass { // 后续数据不用解密 ,直接调用原始函数 - isPass 由 readDecodeHeader() 函数设置
-		econn.isPass = false
 		lenght, err = econn.rwc.Read(data)
-		log.Warningf("%s%s", common.GetValidString(econn.headBuffer[:]), string(data[:lenght]))
+
+		if 0 != lenght && econn.headBuffer[0] >= 'A' && econn.headBuffer[0] <= 'z' {
+			log.Warning(string(data[:lenght]))
+		}
 		return
 	}
 
 	if 0 == econn.decodeSize { // 当前需要解密的数据为0，准备接受下一个加密头
-		lenght, err = econn.readDecodeHeader(data)
-	} else { // 解密大小已获得,进入解密流程
-		decodeSize, err = econn.rwc.Read(data)
+		return econn.readDecodeHeader(data)
 	}
 
-	if nil == err && 0 != decodeSize {
-		lenght = decodeSize // 填充返回数据长度
+	///////////////////////////////////////////////////////////////////////////////////////////
+	//
 
-		if decodeSize > econn.decodeSize {
-			decodeSize = econn.decodeSize // 修正解密长度
+	econn.beforeSend = make([]byte, econn.decodeSize)
+	if lenght, err = io.ReadFull(econn.rwc, econn.beforeSend); nil != err { // 检测数据包是否为加密包或者有效的 HTTP 包
+		if io.ErrUnexpectedEOF == err {
+			err = io.EOF
 		}
 
-		for i := 0; i < decodeSize; i++ {
-			data[i] ^= econn.decodeCode | 0x80
+		if io.EOF != err {
+			log.Warning("Socket full reading failed, current read data size:", lenght, ", need read size:", econn.decodeSize, " err is:", err)
 		}
 
-		econn.decodeSize -= decodeSize
 	}
 
-	//log.Info(string(data[:lenght]))
-	return
+	for i := 0; i < econn.decodeSize; i++ {
+		econn.beforeSend[i] ^= econn.decodeCode | 0x80
+	}
+
+	econn.decodeSize = 0
+
+	return 0, nil
 }
 
 // 加密类型
@@ -99,6 +105,8 @@ const (
 	HeaderHead   = 0xF1
 	HanderTrace  = 0xF2
 	HanderDelect = 0xF3
+
+	HanderBinary = 0xFF
 )
 
 func (econn *ECipherConn) isDecodeHeader(data byte) bool {
@@ -110,6 +118,7 @@ func (econn *ECipherConn) isDecodeHeader(data byte) bool {
 	case HeaderHead: // HEAD
 	case HanderTrace: // TRACE
 	case HanderDelect: // DELECT
+	case HanderBinary:
 	default:
 		return false
 	}
@@ -131,7 +140,9 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 	if false == this.isDecodeHeader(this.headBuffer[0]) {
 		this.beforeSend = this.headBuffer[:1] // 数据需要发送
 
-		log.Warning("Socket decode check failed, current encode type is", this.headBuffer[0])
+		if this.headBuffer[0] >= 'A' && this.headBuffer[0] <= 'z' {
+			log.Warning("Socket decode check failed, current encode type is", this.headBuffer[0])
+		}
 		return 0, nil
 	}
 
@@ -194,8 +205,14 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 			this.beforeSend[1] = 'E'
 			this.beforeSend[2] = 'L'
 			this.beforeSend[3] = 'E'
+		case HanderBinary:
+			this.beforeSend = nil
 		default:
-			log.Warningf("Unknown socksd encode type: % 2x , encode len: %d\n", this.headBuffer[0], this.decodeSize)
+			log.Warning("Unknown socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
+		}
+
+		if nil != this.beforeSend {
+			log.Warning("Old socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
 		}
 
 		//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)

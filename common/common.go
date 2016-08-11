@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var ChanSignalExit chan os.Signal = make(chan os.Signal, 1)
+
 func Substr(s string, pos, length int) string {
 	runes := []rune(s)
 	l := pos + length

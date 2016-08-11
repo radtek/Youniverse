@@ -29,8 +29,6 @@ const (
 	YouiverseSinnalNotifyKey string = "6491628D0A302AA2"
 )
 
-var chanSignal chan os.Signal = make(chan os.Signal, 1)
-
 const (
 	SignalKill = iota
 	SignalTermination
@@ -62,9 +60,9 @@ func (s *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 			reply.Kay = YouiverseSinnalNotifyKey
 			break
 		}
-		chanSignal <- os.Kill
+		common.ChanSignalExit <- os.Kill
 	case SignalTermination:
-		chanSignal <- os.Kill
+		common.ChanSignalExit <- os.Kill
 	}
 
 	return nil
@@ -260,7 +258,7 @@ func main() {
 
 	log.Info("[MAIN] Module start end")
 
-	signal.Notify(chanSignal, os.Interrupt, os.Kill)
+	signal.Notify(common.ChanSignalExit, os.Interrupt, os.Kill)
 
-	<-chanSignal
+	<-common.ChanSignalExit
 }

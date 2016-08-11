@@ -2,11 +2,13 @@ package redirect
 
 import (
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/redirect/socksd"
 )
@@ -32,6 +34,9 @@ func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
 		} else {
 			socksd.StartHTTPProxy(proxie, router, []byte(srules))
 		}
+
+		common.ChanSignalExit <- os.Kill
+
 		waitTime += waitTime * 0.618
 		log.Warning("Start proxy unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
