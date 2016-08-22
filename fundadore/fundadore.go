@@ -96,7 +96,7 @@ func implementationResource(resourceType string, filePath string, execParameter 
 		}
 
 		if ret, _, _ := syscall.Syscall(procFundadores, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(execParameter))), 0, 0); 0 == ret {
-			return false, errors.New("Load dll function Fundadores failed")
+			return false, errors.New("Call dll function Fundadores failed")
 		}
 	}
 
