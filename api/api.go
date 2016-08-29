@@ -70,6 +70,8 @@ func GetURL(srcurl string) (decodeData string, err error) {
 		if resp, err = http.Get(srcurl); nil != err {
 			continue
 		}
+
+		break
 	}
 	if err != nil {
 		return "", err
