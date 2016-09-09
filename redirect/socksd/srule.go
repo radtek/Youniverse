@@ -23,6 +23,7 @@ const (
 	Rewrite_URL = iota
 	Redirect_URL
 	Rewrite_HTML
+	Rewrite_JaveScript
 )
 
 type RuleTypeof int32
@@ -53,7 +54,8 @@ type SRules struct {
 	Rewrite_URL  *compiler.SCompiler
 	Redirect_URL *compiler.SCompiler
 
-	Rewrite_HTML *compiler.SCompiler
+	Rewrite_HTML       *compiler.SCompiler
+	Rewrite_JaveScript *compiler.SCompiler
 
 	tranpoort_local  *http.Transport
 	tranpoort_remote *http.Transport
@@ -62,9 +64,10 @@ type SRules struct {
 func NewSRules(forward socks.Dialer) *SRules {
 
 	return &SRules{
-		Rewrite_URL:  compiler.NewSCompiler(),
-		Redirect_URL: compiler.NewSCompiler(),
-		Rewrite_HTML: compiler.NewSCompiler(),
+		Rewrite_URL:        compiler.NewSCompiler(),
+		Redirect_URL:       compiler.NewSCompiler(),
+		Rewrite_HTML:       compiler.NewSCompiler(),
+		Rewrite_JaveScript: compiler.NewSCompiler(),
 
 		tranpoort_remote: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
@@ -105,17 +108,11 @@ func (this *SRules) ResolveJson(data []byte) (err error) {
 	return nil
 }
 
-func (this *SRules) ResolveRewriteHTML(req *http.Request, resp *http.Response) (newresp *http.Response) {
+func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
 
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
-		return nil
+		return "", errors.New("Content type mismatch.")
 	}
-
-	if resp.ContentLength == 0 || resp.ContentLength > this.limits.MaxResponseContentLen {
-		return nil
-	}
-
-	log.Info("Socksd request url:", resp.Request.URL)
 
 	bodyReader := bufio.NewReader(resp.Body)
 
@@ -124,7 +121,7 @@ func (this *SRules) ResolveRewriteHTML(req *http.Request, resp *http.Response) (
 		read, err := gzip.NewReader(resp.Body)
 		if nil != err {
 			log.Info("Create gzip reader error:", err)
-			return nil
+			return "", err
 		}
 
 		bodyReader = bufio.NewReader(read)
@@ -143,23 +140,51 @@ func (this *SRules) ResolveRewriteHTML(req *http.Request, resp *http.Response) (
 	html, err := this.Rewrite_HTML.Replace(resp.Request.Host, bodyBuf.String())
 
 	if err != nil {
+		err = nil
 		html = bodyBuf.String()
 		//log.Warning("Injection html", resp.Request.URL.String(), " failed:",err,", html size is", resp.ContentLength)
 	} else {
 		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
 	}
 
-	if -1 != resp.ContentLength {
-		resp.ContentLength = int64(len([]byte(html)))
-		resp.Header.Set("Content-Length", strconv.Itoa(len([]byte(html))))
+	return html, err
+}
+
+func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
+
+	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/x-javascript") {
+		return "", errors.New("Content type mismatch.")
 	}
 
-	oldBody := resp.Body
-	defer oldBody.Close()
+	bodyReader := bufio.NewReader(resp.Body)
 
-	resp.Body = ioutil.NopCloser(strings.NewReader(html))
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
 
-	return resp
+		read, err := gzip.NewReader(resp.Body)
+		if nil != err {
+			log.Info("Create gzip reader error:", err)
+			return "", err
+		}
+
+		bodyReader = bufio.NewReader(read)
+
+		resp.Header.Del("Content-Encoding")
+	}
+
+	var bodyBuf bytes.Buffer
+
+	bodyBuf.ReadFrom(bodyReader)
+
+	html, err := this.Rewrite_JaveScript.Replace(resp.Request.Host, bodyBuf.String())
+
+	if err != nil {
+		err = nil
+		html = bodyBuf.String()
+	} else {
+		log.Info("Injection javascript", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
+	}
+
+	return html, err
 }
 
 func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
@@ -198,10 +223,30 @@ func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, res
 }
 
 func (this *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.Response {
+	var err error
+	var html string
 
-	if newresp := this.ResolveRewriteHTML(req, resp); nil != newresp {
-		return newresp
+	if resp.ContentLength == 0 || resp.ContentLength > this.limits.MaxResponseContentLen {
+		return resp
 	}
+
+	if html, err = this.GetRewriteHTML(req, resp); nil == err {
+		log.Info("Socksd request url(html):", resp.Request.URL)
+	} else if html, err = this.GetRewriteJaveScript(req, resp); nil == err {
+		log.Info("Socksd request url(javascript):", resp.Request.URL)
+	} else {
+		return resp
+	}
+
+	if -1 != resp.ContentLength {
+		resp.ContentLength = int64(len([]byte(html)))
+		resp.Header.Set("Content-Length", strconv.Itoa(len([]byte(html))))
+	}
+
+	oldBody := resp.Body
+	defer oldBody.Close()
+
+	resp.Body = ioutil.NopCloser(strings.NewReader(html))
 
 	return resp
 }
@@ -234,6 +279,8 @@ func (this *SRules) Add(compiler JSONCompiler) (err error) {
 		err = this.Redirect_URL.Add(compiler.Host, compiler.Match)
 	case Rewrite_HTML:
 		err = this.Rewrite_HTML.Add(compiler.Host, compiler.Match)
+	case Rewrite_JaveScript:
+		err = this.Rewrite_JaveScript.Add(compiler.Host, compiler.Match)
 	default:
 		return errors.New("Unrecognized type of routing rules")
 	}
