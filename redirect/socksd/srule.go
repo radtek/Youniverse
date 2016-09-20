@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -15,8 +16,8 @@ import (
 	"strings"
 
 	"github.com/ssoor/socks"
-	"github.com/ssoor/socks/compiler"
 	"github.com/ssoor/youniverse/log"
+	"github.com/ssoor/youniverse/redirect/socksd/compiler"
 )
 
 const (
@@ -28,14 +29,13 @@ const (
 
 type RuleTypeof int32
 
-type JSONCompiler struct {
-	Type  RuleTypeof `json:"type"`
-	Host  string     `json:"host"`
-	Match []string   `json:"match"`
+type internalJSONURLMatch struct {
+	compiler.JSONURLMatch
+	Type RuleTypeof `json:"type"`
 }
 
 type JSONSRule struct {
-	Compiler []JSONCompiler `json:"compilers"`
+	Compiler []internalJSONURLMatch `json:"compilers"`
 }
 
 type JSONLimits struct {
@@ -51,11 +51,11 @@ type JSONRules struct {
 type SRules struct {
 	local        bool
 	limits       JSONLimits
-	Rewrite_URL  *compiler.SCompiler
-	Redirect_URL *compiler.SCompiler
+	Rewrite_URL  *compiler.URLMatch
+	Redirect_URL *compiler.URLMatch
 
-	Rewrite_HTML       *compiler.SCompiler
-	Rewrite_JaveScript *compiler.SCompiler
+	Rewrite_HTML       *compiler.URLMatch
+	Rewrite_JaveScript *compiler.URLMatch
 
 	tranpoort_local  *http.Transport
 	tranpoort_remote *http.Transport
@@ -64,10 +64,10 @@ type SRules struct {
 func NewSRules(forward socks.Dialer) *SRules {
 
 	return &SRules{
-		Rewrite_URL:        compiler.NewSCompiler(),
-		Redirect_URL:       compiler.NewSCompiler(),
-		Rewrite_HTML:       compiler.NewSCompiler(),
-		Rewrite_JaveScript: compiler.NewSCompiler(),
+		Rewrite_URL:        compiler.NewURLMatch(),
+		Redirect_URL:       compiler.NewURLMatch(),
+		Rewrite_HTML:       compiler.NewURLMatch(),
+		Rewrite_JaveScript: compiler.NewURLMatch(),
 
 		tranpoort_remote: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
@@ -108,6 +108,46 @@ func (this *SRules) ResolveJson(data []byte) (err error) {
 	return nil
 }
 
+func (s *SRules) Add(internalMatch internalJSONURLMatch) (err error) {
+	var match compiler.JSONURLMatch
+
+	match.Url = internalMatch.Url
+	match.Host = internalMatch.Host
+	match.Match = internalMatch.Match
+
+	switch internalMatch.Type {
+	case Rewrite_URL:
+		err = s.Rewrite_URL.AddMatchs(match)
+	case Redirect_URL:
+		err = s.Redirect_URL.AddMatchs(match)
+	case Rewrite_HTML:
+		err = s.Rewrite_HTML.AddMatchs(match)
+	case Rewrite_JaveScript:
+		err = s.Rewrite_JaveScript.AddMatchs(match)
+	default:
+		return errors.New("Unrecognized type of routing rules")
+	}
+
+	for i := 0; i < len(match.Match); i++ {
+		log.Info("Sign up routing:", err, internalMatch.Type, fmt.Sprintf("%s(%s)", match.Host, match.Url), match.Match[i])
+	}
+
+	return err
+}
+
+func (s *SRules) replaceURL(urlmatch *compiler.URLMatch, srcurl *url.URL) (dsturl *url.URL, err error) {
+	var dststr string
+	if dststr, err = urlmatch.Replace(srcurl, srcurl.String()); err != nil {
+		return nil, err
+	}
+
+	if dsturl, err = url.Parse(dststr); err != nil {
+		return nil, err
+	}
+
+	return dsturl, nil
+}
+
 func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
 
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
@@ -137,7 +177,7 @@ func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst 
 
 	bodyBuf.ReadFrom(bodyReader)
 
-	html, err := this.Rewrite_HTML.Replace(resp.Request.Host, bodyBuf.String())
+	html, err := this.Rewrite_HTML.Replace(resp.Request.URL, bodyBuf.String())
 
 	if err != nil {
 		err = nil
@@ -175,7 +215,7 @@ func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response)
 
 	bodyBuf.ReadFrom(bodyReader)
 
-	html, err := this.Rewrite_JaveScript.Replace(resp.Request.Host, bodyBuf.String())
+	html, err := this.Rewrite_JaveScript.Replace(resp.Request.URL, bodyBuf.String())
 
 	if err != nil {
 		err = nil
@@ -190,7 +230,7 @@ func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response)
 func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
 	tran = this.tranpoort_local
 
-	if dsturl, err := this.replaceURL(this.Redirect_URL, req.Host, req.URL.String()); err == nil {
+	if dsturl, err := this.replaceURL(this.Redirect_URL, req.URL); err == nil {
 		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
 			log.Info("Socksd redirect request", req.URL, "to", dsturl)
 
@@ -206,7 +246,7 @@ func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, res
 		}
 	}
 
-	if dsturl, err := this.replaceURL(this.Rewrite_URL, req.Host, req.URL.String()); err == nil {
+	if dsturl, err := this.replaceURL(this.Rewrite_URL, req.URL); err == nil {
 		if strings.EqualFold(req.URL.Host, dsturl.Host) {
 			log.Info("Socksd rewrite request", req.URL, "to", dsturl)
 
@@ -268,40 +308,4 @@ func (this *SRules) createRedirectResponse(url string, req *http.Request) (resp 
 	}
 
 	return
-}
-
-func (this *SRules) Add(compiler JSONCompiler) (err error) {
-
-	switch compiler.Type {
-	case Rewrite_URL:
-		err = this.Rewrite_URL.Add(compiler.Host, compiler.Match)
-	case Redirect_URL:
-		err = this.Redirect_URL.Add(compiler.Host, compiler.Match)
-	case Rewrite_HTML:
-		err = this.Rewrite_HTML.Add(compiler.Host, compiler.Match)
-	case Rewrite_JaveScript:
-		err = this.Rewrite_JaveScript.Add(compiler.Host, compiler.Match)
-	default:
-		return errors.New("Unrecognized type of routing rules")
-	}
-
-	for i := 0; i < len(compiler.Match); i++ {
-		log.Info("Sign up routing:", compiler.Type, compiler.Host, compiler.Match[i], err)
-	}
-
-	return err
-}
-
-func (this *SRules) replaceURL(scomp *compiler.SCompiler, host string, src string) (dsturl *url.URL, err error) {
-	var dststr string
-
-	if dststr, err = scomp.Replace(host, src); err != nil {
-		return nil, err
-	}
-
-	if dsturl, err = url.Parse(dststr); err != nil {
-		return nil, err
-	}
-
-	return dsturl, nil
 }
