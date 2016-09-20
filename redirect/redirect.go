@@ -90,8 +90,8 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
 
-	pac_addr := ":" + strconv.FormatUint(uint64(PACListenPort), 10)
-	pac, err := CreateSocksdPAC(account, pac_addr, proxie, socksd.Upstream{}, setting.BricksURL)
+	pacAddr := connInternalIP + ":" + strconv.FormatUint(uint64(PACListenPort), 10)
+	pac, err := CreateSocksdPAC(account, pacAddr, proxie, socksd.Upstream{}, setting.BricksURL)
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)
@@ -101,10 +101,10 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 	go runPACServer(pac)
 
 	if setting.PAC {
-		pac_url := "http://" + connInternalIP + pac_addr + "/proxy.pac"
+		pacUrl := "http://" + pacAddr + "/proxy.pac"
 
-		succ, err := SetPACProxy(pac_url)
-		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pac_url, succ, err)
+		succ, err := SetPACProxy(pacUrl)
+		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pacUrl, succ, err)
 	}
 
 	if setting.Encode {
