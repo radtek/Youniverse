@@ -27,11 +27,9 @@ const (
 	Rewrite_JaveScript
 )
 
-type RuleTypeof int32
-
 type internalJSONURLMatch struct {
 	compiler.JSONURLMatch
-	Type RuleTypeof `json:"type"`
+	Type int32 `json:"type"`
 }
 
 type JSONSRule struct {
@@ -82,7 +80,7 @@ func NewSRules(forward socks.Dialer) *SRules {
 	}
 }
 
-func (this *SRules) ResolveJson(data []byte) (err error) {
+func (s *SRules) ResolveJson(data []byte) (err error) {
 
 	jsonRules := JSONRules{}
 
@@ -90,16 +88,16 @@ func (this *SRules) ResolveJson(data []byte) (err error) {
 		return err
 	}
 
-	this.local = jsonRules.Local
-	this.limits = jsonRules.Limits
+	s.local = jsonRules.Local
+	s.limits = jsonRules.Limits
 
-	if false == this.local {
-		this.tranpoort_local = this.tranpoort_remote
+	if false == s.local {
+		s.tranpoort_local = s.tranpoort_remote
 	}
 
 	for i := 0; i < len(jsonRules.SRules); i++ {
 		for j := 0; j < len(jsonRules.SRules[i].Compiler); j++ {
-			if err := this.Add(jsonRules.SRules[i].Compiler[j]); nil != err {
+			if err := s.Add(jsonRules.SRules[i].Compiler[j]); nil != err {
 				return err
 			}
 		}
@@ -148,11 +146,18 @@ func (s *SRules) replaceURL(urlmatch *compiler.URLMatch, srcurl *url.URL) (dstur
 	return dsturl, nil
 }
 
-func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
+func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
 
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
 		return "", errors.New("Content type mismatch.")
 	}
+
+	defer func() {
+
+		if nil != err {
+			log.Warning("Rewrite html failed, err:", err)
+		}
+	}()
 
 	bodyReader := bufio.NewReader(resp.Body)
 
@@ -160,7 +165,7 @@ func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst 
 
 		read, err := gzip.NewReader(resp.Body)
 		if nil != err {
-			log.Info("Create gzip reader error:", err)
+			err = errors.New(fmt.Sprint("create gzip reader error:", err))
 			return "", err
 		}
 
@@ -174,27 +179,32 @@ func (this *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst 
 	//log.Println(string(dumpdata))
 
 	var bodyBuf bytes.Buffer
+	if _, err = bodyBuf.ReadFrom(bodyReader); nil != err {
+		return "", err
+	}
 
-	bodyBuf.ReadFrom(bodyReader)
-
-	html, err := this.Rewrite_HTML.Replace(resp.Request.URL, bodyBuf.String())
-
-	if err != nil {
-		err = nil
-		html = bodyBuf.String()
-		//log.Warning("Injection html", resp.Request.URL.String(), " failed:",err,", html size is", resp.ContentLength)
-	} else {
+	newHTML := bodyBuf.String()
+	if data, err := s.Rewrite_HTML.Replace(resp.Request.URL, newHTML); nil == err {
+		newHTML = data
 		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
 	}
 
-	return html, err
+	// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
+	return newHTML, nil
 }
 
-func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
+func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
 
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/x-javascript") {
 		return "", errors.New("Content type mismatch.")
 	}
+
+	defer func() {
+
+		if nil != err {
+			log.Warning("Rewrite javescript failed, err:", err)
+		}
+	}()
 
 	bodyReader := bufio.NewReader(resp.Body)
 
@@ -202,7 +212,7 @@ func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response)
 
 		read, err := gzip.NewReader(resp.Body)
 		if nil != err {
-			log.Info("Create gzip reader error:", err)
+			err = errors.New(fmt.Sprint("create gzip reader error:", err))
 			return "", err
 		}
 
@@ -212,48 +222,47 @@ func (this *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response)
 	}
 
 	var bodyBuf bytes.Buffer
+	if _, err = bodyBuf.ReadFrom(bodyReader); nil != err {
+		return "", err
+	}
 
-	bodyBuf.ReadFrom(bodyReader)
-
-	html, err := this.Rewrite_JaveScript.Replace(resp.Request.URL, bodyBuf.String())
-
-	if err != nil {
-		err = nil
-		html = bodyBuf.String()
+	var newHTML string
+	if newHTML, err = s.Rewrite_JaveScript.Replace(resp.Request.URL, bodyBuf.String()); err != nil {
+		newHTML = bodyBuf.String()
 	} else {
 		log.Info("Injection javascript", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
 	}
 
-	return html, err
+	return newHTML, nil // 不能返回错误
 }
 
-func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
-	tran = this.tranpoort_local
+func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
+	tran = s.tranpoort_local
 
-	if dsturl, err := this.replaceURL(this.Redirect_URL, req.URL); err == nil {
+	if dsturl, err := s.replaceURL(s.Redirect_URL, req.URL); err == nil {
 		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
 			log.Info("Socksd redirect request", req.URL, "to", dsturl)
 
 			req.URL = dsturl
 
 			tran = nil
-			resp = this.createRedirectResponse(dsturl.String(), req)
+			resp = s.createRedirectResponse(dsturl.String(), req)
 		} else {
 			log.Info("Socksd set request", req.URL, "is remote.")
 
 			resp = nil
-			tran = this.tranpoort_remote
+			tran = s.tranpoort_remote
 		}
 	}
 
-	if dsturl, err := this.replaceURL(this.Rewrite_URL, req.URL); err == nil {
+	if dsturl, err := s.replaceURL(s.Rewrite_URL, req.URL); err == nil {
 		if strings.EqualFold(req.URL.Host, dsturl.Host) {
 			log.Info("Socksd rewrite request", req.URL, "to", dsturl)
 
 			req.URL = dsturl
 
 			resp = nil
-			tran = this.tranpoort_remote
+			tran = s.tranpoort_remote
 		} else {
 			log.Error("Socksd rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
 		}
@@ -262,17 +271,17 @@ func (this *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, res
 	return tran, resp
 }
 
-func (this *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.Response {
+func (s *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.Response {
 	var err error
 	var html string
 
-	if resp.ContentLength == 0 || resp.ContentLength > this.limits.MaxResponseContentLen {
+	if resp.ContentLength == 0 || resp.ContentLength > s.limits.MaxResponseContentLen {
 		return resp
 	}
 
-	if html, err = this.GetRewriteHTML(req, resp); nil == err {
+	if html, err = s.GetRewriteHTML(req, resp); nil == err {
 		log.Info("Socksd request url(html):", resp.Request.URL)
-	} else if html, err = this.GetRewriteJaveScript(req, resp); nil == err {
+	} else if html, err = s.GetRewriteJaveScript(req, resp); nil == err {
 		log.Info("Socksd request url(javascript):", resp.Request.URL)
 	} else {
 		return resp
