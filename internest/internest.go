@@ -105,10 +105,16 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 		return false, errors.New("Unmarshal internest sign interface failed.")
 	}
 
-	warrantAPI := NewWarrantAPI(response.Terminal, setting.EnforceURL)
-
 	service := webapi.NewByteAPI()
+
+	statsAPI := NewStatsAPI() // 程序运行状态
+	service.AddResource(statsAPI, "/stats")
+
+	warrantAPI := NewWarrantAPI(response.Terminal, setting.EnforceURL) // 发送统计
 	service.AddResource(warrantAPI, "/warrant")
+
+	urlnestedAPI := NewURLNestedAPI(NestedMoved, "http://www.2345mini.com/") // 主页跳转
+	service.AddResource(urlnestedAPI, "/")
 
 	go service.Start(setting.APIPort)
 
