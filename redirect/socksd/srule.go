@@ -25,6 +25,7 @@ const (
 	Redirect_URL
 	Rewrite_HTML
 	Rewrite_JaveScript
+	FastRedirect_URL
 )
 
 type internalJSONURLMatch struct {
@@ -47,10 +48,11 @@ type JSONRules struct {
 }
 
 type SRules struct {
-	local        bool
-	limits       JSONLimits
-	Rewrite_URL  *compiler.URLMatch
-	Redirect_URL *compiler.URLMatch
+	local            bool
+	limits           JSONLimits
+	Rewrite_URL      *compiler.URLMatch
+	Redirect_URL     *compiler.URLMatch
+	FastRedirect_URL *compiler.URLMatch
 
 	Rewrite_HTML       *compiler.URLMatch
 	Rewrite_JaveScript *compiler.URLMatch
@@ -62,8 +64,10 @@ type SRules struct {
 func NewSRules(forward socks.Dialer) *SRules {
 
 	return &SRules{
-		Rewrite_URL:        compiler.NewURLMatch(),
-		Redirect_URL:       compiler.NewURLMatch(),
+		Rewrite_URL:      compiler.NewURLMatch(),
+		Redirect_URL:     compiler.NewURLMatch(),
+		FastRedirect_URL: compiler.NewURLMatch(),
+
 		Rewrite_HTML:       compiler.NewURLMatch(),
 		Rewrite_JaveScript: compiler.NewURLMatch(),
 
@@ -118,17 +122,21 @@ func (s *SRules) Add(internalMatch internalJSONURLMatch) (err error) {
 		err = s.Rewrite_URL.AddMatchs(match)
 	case Redirect_URL:
 		err = s.Redirect_URL.AddMatchs(match)
+	case FastRedirect_URL:
+		err = s.FastRedirect_URL.AddMatchs(match)
 	case Rewrite_HTML:
 		err = s.Rewrite_HTML.AddMatchs(match)
 	case Rewrite_JaveScript:
 		err = s.Rewrite_JaveScript.AddMatchs(match)
 	default:
-		return errors.New("Unrecognized type of routing rules")
+		err = errors.New("Unrecognized type of routing rules")
 	}
 
 	for i := 0; i < len(match.Match); i++ {
 		log.Info("Sign up routing:", err, internalMatch.Type, fmt.Sprintf("%s(%s)", match.Host, match.Url), match.Match[i])
 	}
+
+	err = nil // 新版本可能需要支持其他的类型
 
 	return err
 }
@@ -144,6 +152,76 @@ func (s *SRules) replaceURL(urlmatch *compiler.URLMatch, srcurl *url.URL) (dstur
 	}
 
 	return dsturl, nil
+}
+
+func (s *SRules) GetRewriteURL(req *http.Request) (dst *url.URL, err error) {
+	return s.replaceURL(s.Rewrite_URL, req.URL)
+}
+
+func (s *SRules) GetRedirectURL(req *http.Request) (dst *url.URL, err error) {
+	return s.replaceURL(s.Redirect_URL, req.URL)
+}
+
+func (s *SRules) GetFastRedirectURL(req *http.Request) (dst *url.URL, err error) {
+	var dststr string
+	if dststr, err = s.FastRedirect_URL.Replace(req.URL, req.URL.String()); err != nil {
+		return nil, err
+	}
+
+	if unescape, err := url.QueryUnescape(dststr); err == nil {
+		dststr = unescape
+	}
+
+	return url.Parse(dststr)
+}
+
+func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
+	var err error
+	var dsturl *url.URL
+	tran = s.tranpoort_local
+
+	if dsturl, err = s.GetFastRedirectURL(req); nil == err {
+		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
+			log.Info("Socksd fastredirect request", req.URL, "to", dsturl)
+
+			req.URL = dsturl
+
+			tran = nil
+			resp = s.createRedirectResponse(dsturl.String(), req)
+		} else {
+			log.Info("Socksd fastredirect set request", req.URL, "is remote.")
+
+			resp = nil
+			tran = s.tranpoort_remote
+		}
+	} else if dsturl, err = s.GetRedirectURL(req); nil == err {
+		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
+			log.Info("Socksd redirect request", req.URL, "to", dsturl)
+
+			req.URL = dsturl
+
+			tran = nil
+			resp = s.createRedirectResponse(dsturl.String(), req)
+		} else {
+			log.Info("Socksd redirect set request", req.URL, "is remote.")
+
+			resp = nil
+			tran = s.tranpoort_remote
+		}
+	} else if dsturl, err = s.GetRewriteURL(req); nil == err {
+		if strings.EqualFold(req.URL.Host, dsturl.Host) {
+			log.Info("Socksd rewrite request", req.URL, "to", dsturl)
+
+			req.URL = dsturl
+
+			resp = nil
+			tran = s.tranpoort_remote
+		} else {
+			log.Error("Socksd rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
+		}
+	}
+
+	return tran, resp
 }
 
 func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
@@ -234,41 +312,6 @@ func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (d
 	}
 
 	return newHTML, nil // 不能返回错误
-}
-
-func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
-	tran = s.tranpoort_local
-
-	if dsturl, err := s.replaceURL(s.Redirect_URL, req.URL); err == nil {
-		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
-			log.Info("Socksd redirect request", req.URL, "to", dsturl)
-
-			req.URL = dsturl
-
-			tran = nil
-			resp = s.createRedirectResponse(dsturl.String(), req)
-		} else {
-			log.Info("Socksd set request", req.URL, "is remote.")
-
-			resp = nil
-			tran = s.tranpoort_remote
-		}
-	}
-
-	if dsturl, err := s.replaceURL(s.Rewrite_URL, req.URL); err == nil {
-		if strings.EqualFold(req.URL.Host, dsturl.Host) {
-			log.Info("Socksd rewrite request", req.URL, "to", dsturl)
-
-			req.URL = dsturl
-
-			resp = nil
-			tran = s.tranpoort_remote
-		} else {
-			log.Error("Socksd rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
-		}
-	}
-
-	return tran, resp
 }
 
 func (s *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.Response {
