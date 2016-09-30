@@ -62,7 +62,7 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 		lenght, err = econn.rwc.Read(data)
 
 		if 0 != lenght && econn.headBuffer[0] >= 'A' && econn.headBuffer[0] <= 'z' {
-			log.Warning(string(data[:lenght]))
+			//log.Warning(string(data[:lenght]))
 		}
 		return
 	}
