@@ -3,8 +3,9 @@ package compiler
 import (
 	"errors"
 	"net/url"
-	"regexp"
 	"strings"
+
+	"github.com/dlclark/regexp2"
 )
 
 type JSONURLMatch struct {
@@ -15,7 +16,7 @@ type JSONURLMatch struct {
 
 type matchData struct {
 	matchs   []SMatch
-	urlRegex *regexp.Regexp
+	urlRegex *regexp2.Regexp
 }
 type URLMatch struct {
 	data map[string][]matchData
@@ -28,7 +29,7 @@ func NewURLMatch() *URLMatch {
 func (sc *URLMatch) AddMatchs(jsonMatchs JSONURLMatch) (err error) {
 	var urlmatch matchData
 
-	if urlmatch.urlRegex, err = regexp.Compile(jsonMatchs.Url); err != nil {
+	if urlmatch.urlRegex, err = regexp2.Compile(jsonMatchs.Url, 0); err != nil {
 		return err
 	}
 
@@ -47,7 +48,7 @@ func (sc *URLMatch) AddMatchs(jsonMatchs JSONURLMatch) (err error) {
 
 func (sc *URLMatch) matchReplaces(md []matchData, url string, src string) (dst string, err error) {
 	for _, urlmatch := range md {
-		if false == urlmatch.urlRegex.MatchString(url) {
+		if isMatch, _ := urlmatch.urlRegex.MatchString(url); false == isMatch { // 当出错时，返回 false
 			continue
 		}
 

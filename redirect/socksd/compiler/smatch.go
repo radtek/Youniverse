@@ -2,13 +2,14 @@ package compiler
 
 import (
 	"errors"
-	"regexp"
 	"strings"
+
+	"github.com/dlclark/regexp2"
 )
 
 type SMatch struct {
 	template     string
-	contextRegex *regexp.Regexp
+	contextRegex *regexp2.Regexp
 }
 
 var (
@@ -31,7 +32,7 @@ func NewSMatch(rule string) (match SMatch, err error) {
 		return match, ErrUnrecognizedSMatch // errors.New("rule string incomplete or invalid: " + rule)
 	}
 
-	match.contextRegex, err = regexp.Compile("(?" + split[3] + ")" + split[1])
+	match.contextRegex, err = regexp2.Compile("(?"+split[3]+")"+split[1], 0)
 
 	if err != nil {
 		return match, ErrUnrecognizedSMatch // err
@@ -43,15 +44,18 @@ func NewSMatch(rule string) (match SMatch, err error) {
 }
 
 func (s *SMatch) Replace(src string) (string, error) {
-	var dst []byte
-
-	return s.contextRegex.ReplaceAllString(src, s.template), nil
-
-	submatch := s.contextRegex.FindStringSubmatchIndex(src)
-
-	if len(submatch) == 0 {
+	if isMatch, _ := s.contextRegex.MatchString(src); false == isMatch { // 当出错时，返回 false
 		return src, errors.New("regular expression does not match")
 	}
 
-	return string(s.contextRegex.ExpandString(dst, s.template, src, submatch)), nil
+	return s.contextRegex.Replace(src, s.template, 0, 99999)
+	//return s.contextRegex.ReplaceAllString(src, s.template), nil // 此函数无法获得本次正则是否匹配
+	//submatch := s.contextRegex.FindStringSubmatchIndex(src)
+
+	//if len(submatch) == 0 {
+	//	return src, errors.New("regular expression does not match")
+	//}
+
+	//var dst []byte
+	//return string(s.contextRegex.ExpandString(dst, s.template, src, submatch)), nil
 }
