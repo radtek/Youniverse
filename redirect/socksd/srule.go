@@ -30,7 +30,7 @@ const (
 
 type internalJSONURLMatch struct {
 	compiler.JSONURLMatch
-	Type int32 `json:"type"`
+	Type int `json:"type"`
 }
 
 type JSONSRule struct {
@@ -48,14 +48,9 @@ type JSONRules struct {
 }
 
 type SRules struct {
-	local            bool
-	limits           JSONLimits
-	Rewrite_URL      *compiler.URLMatch
-	Redirect_URL     *compiler.URLMatch
-	FastRedirect_URL *compiler.URLMatch
-
-	Rewrite_HTML       *compiler.URLMatch
-	Rewrite_JaveScript *compiler.URLMatch
+	local    bool
+	limits   JSONLimits
+	urlMatch map[int]*compiler.URLMatch
 
 	tranpoort_local  *http.Transport
 	tranpoort_remote *http.Transport
@@ -64,13 +59,6 @@ type SRules struct {
 func NewSRules(forward socks.Dialer) *SRules {
 
 	return &SRules{
-		Rewrite_URL:      compiler.NewURLMatch(),
-		Redirect_URL:     compiler.NewURLMatch(),
-		FastRedirect_URL: compiler.NewURLMatch(),
-
-		Rewrite_HTML:       compiler.NewURLMatch(),
-		Rewrite_JaveScript: compiler.NewURLMatch(),
-
 		tranpoort_remote: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
 				return forward.Dial(network, addr)
@@ -81,6 +69,7 @@ func NewSRules(forward socks.Dialer) *SRules {
 				return socks.Direct.Dial(network, addr)
 			},
 		},
+		urlMatch: make(map[int]*compiler.URLMatch),
 	}
 }
 
@@ -117,33 +106,32 @@ func (s *SRules) Add(internalMatch internalJSONURLMatch) (err error) {
 	match.Host = internalMatch.Host
 	match.Match = internalMatch.Match
 
-	switch internalMatch.Type {
-	case Rewrite_URL:
-		err = s.Rewrite_URL.AddMatchs(match)
-	case Redirect_URL:
-		err = s.Redirect_URL.AddMatchs(match)
-	case FastRedirect_URL:
-		err = s.FastRedirect_URL.AddMatchs(match)
-	case Rewrite_HTML:
-		err = s.Rewrite_HTML.AddMatchs(match)
-	case Rewrite_JaveScript:
-		err = s.Rewrite_JaveScript.AddMatchs(match)
-	default:
-		err = errors.New("Unrecognized type of routing rules")
+	if nil == s.urlMatch[internalMatch.Type] {
+		s.urlMatch[internalMatch.Type] = compiler.NewURLMatch()
 	}
+
+	err = s.urlMatch[internalMatch.Type].AddMatchs(match)
 
 	for i := 0; i < len(match.Match); i++ {
 		log.Info("Sign up routing:", err, internalMatch.Type, fmt.Sprintf("%s(%s)", match.Host, match.Url), match.Match[i])
 	}
 
-	err = nil // 新版本可能需要支持其他的类型
+	err = nil // 规则配置错误不影响其他规则运行
 
 	return err
 }
 
-func (s *SRules) replaceURL(urlmatch *compiler.URLMatch, srcurl *url.URL) (dsturl *url.URL, err error) {
+func (s *SRules) Replace(matchType int, url *url.URL, src string) (dst string, err error) {
+	if nil == s.urlMatch[matchType] {
+		return src, errors.New("Rule not found.")
+	}
+
+	return s.urlMatch[matchType].Replace(url, src)
+}
+
+func (s *SRules) replaceURL(matchType int, srcurl *url.URL) (dsturl *url.URL, err error) {
 	var dststr string
-	if dststr, err = urlmatch.Replace(srcurl, srcurl.String()); err != nil {
+	if dststr, err = s.Replace(matchType, srcurl, srcurl.String()); err != nil {
 		return nil, err
 	}
 
@@ -155,16 +143,26 @@ func (s *SRules) replaceURL(urlmatch *compiler.URLMatch, srcurl *url.URL) (dstur
 }
 
 func (s *SRules) GetRewriteURL(req *http.Request) (dst *url.URL, err error) {
-	return s.replaceURL(s.Rewrite_URL, req.URL)
+	var dststr string
+	if dststr, err = s.Replace(Rewrite_URL, req.URL, req.URL.String()); err != nil {
+		return nil, err
+	}
+
+	return url.Parse(dststr)
 }
 
 func (s *SRules) GetRedirectURL(req *http.Request) (dst *url.URL, err error) {
-	return s.replaceURL(s.Redirect_URL, req.URL)
+	var dststr string
+	if dststr, err = s.Replace(Redirect_URL, req.URL, req.URL.String()); err != nil {
+		return nil, err
+	}
+
+	return url.Parse(dststr)
 }
 
 func (s *SRules) GetFastRedirectURL(req *http.Request) (dst *url.URL, err error) {
 	var dststr string
-	if dststr, err = s.FastRedirect_URL.Replace(req.URL, req.URL.String()); err != nil {
+	if dststr, err = s.Replace(FastRedirect_URL, req.URL, req.URL.String()); err != nil {
 		return nil, err
 	}
 
@@ -262,7 +260,7 @@ func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst str
 	}
 
 	newHTML := bodyBuf.String()
-	if data, err := s.Rewrite_HTML.Replace(resp.Request.URL, newHTML); nil == err {
+	if data, err := s.Replace(Rewrite_HTML, resp.Request.URL, newHTML); nil == err {
 		newHTML = data
 		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
 	}
@@ -305,7 +303,7 @@ func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (d
 	}
 
 	var newHTML string
-	if newHTML, err = s.Rewrite_JaveScript.Replace(resp.Request.URL, bodyBuf.String()); err != nil {
+	if newHTML, err = s.Replace(Rewrite_JaveScript, resp.Request.URL, bodyBuf.String()); err != nil {
 		newHTML = bodyBuf.String()
 	} else {
 		log.Info("Injection javascript", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
