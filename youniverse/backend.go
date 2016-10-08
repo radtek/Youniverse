@@ -3,10 +3,10 @@ package youniverse
 // Client for dbserver/slowdb
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-    
-    "github.com/ssoor/youniverse/log"
 )
 
 type Backend struct {
@@ -19,30 +19,29 @@ func NewBackend(base []string) Backend {
 	}
 }
 
-func (b *Backend) Get(key string) []byte {
-	var data []byte
+func (b *Backend) Get(key string) (data []byte, err error) {
+	var resp *http.Response
 
 	for _, baseURL := range b.baseURLs {
-		resp, err := http.Get(baseURL + key)
+		resp, err = http.Get(baseURL + key)
 		if err != nil {
-			log.Warning(err)
 			continue
 		}
 
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Warning("Backend download resource",baseURL + key,"failed, interface result stats:", resp.StatusCode)
+			err = errors.New(fmt.Sprint("Backend download resource", baseURL+key, "failed, interface result stats:", resp.StatusCode))
 			continue
 		}
 
 		data, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Error(err)
 			continue
 		}
 
+		err = nil
 		break
 	}
 
-	return data
+	return data, err
 }

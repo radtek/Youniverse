@@ -91,8 +91,10 @@ func StartYouniverse(account string, guid string, peerAddr string, setting Setti
 
 	Resource = groupcache.NewGroup("resource", setting.MaxSize, groupcache.GetterFunc(
 		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
-			dest.SetBytes([]byte(client.Get(key)))
-			return nil
+			data, err := client.Get(key)
+
+			dest.SetBytes(data)
+			return err
 		}))
 
 	go http.ListenAndServe(peerAddr, http.HandlerFunc(peers.ServeHTTP))

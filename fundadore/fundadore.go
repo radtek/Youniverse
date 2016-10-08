@@ -143,6 +143,7 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 					return false, err
 				}
 
+				log.Warning(err)
 				continue
 			}
 
