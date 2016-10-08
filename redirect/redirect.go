@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/assistant"
 	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/redirect/socksd"
@@ -118,13 +119,9 @@ func StartHomelock(account string, guid string, setting Settings) (bool, error) 
 		pacAddr := SocketCreateSockAddr(connInternalIP, uint16(PACListenPort))
 		encodeAddr := SocketCreateSockAddr(connInternalIP, uint16(encodeport))
 
-		if err := LoadDLL(); err != nil {
-			log.Warning("Init redirect module failed:", err)
-			return true, ErrorStartEncodeModule
-		}
+		handle, err := assistant.SetBusinessData(pacAddr, encodeAddr)
+		log.Info("Setting redirect data share handle:", handle, ", err:", err)
 
-		handle := SetBusinessData(pacAddr, encodeAddr)
-		log.Info("Setting redirect data share handle:", handle)
 	}
 
 	return true, nil

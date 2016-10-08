@@ -12,6 +12,7 @@ import (
 	"github.com/ssoor/webapi"
 	"github.com/ssoor/winapi"
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/assistant"
 	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 )
@@ -116,7 +117,19 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	urlnestedAPI := NewURLNestedAPI(NestedMoved, "http://www.2345mini.com/") // 主页跳转
 	service.AddResource(urlnestedAPI, "/")
 
+	if 0 == setting.APIPort {
+		selectPort, err := common.SocketSelectPort("tcp", 10010)
+		if nil != err {
+			return false, err
+		}
+
+		setting.APIPort = int(selectPort)
+	}
+
 	go service.Start(setting.APIPort)
+
+	handle, err := assistant.SetAPIPort(setting.APIPort)
+	log.Info("Setting internest data share handle:", handle, ", err:", err)
 
 	return true, nil
 }
