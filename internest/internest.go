@@ -114,7 +114,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	warrantAPI := NewWarrantAPI(response.Terminal, setting.EnforceURL) // 发送统计
 	service.AddResource(warrantAPI, "/warrant")
 
-	urlnestedAPI := NewURLNestedAPI(NestedIFrame, "http://www.2345mini.com/") // 主页跳转
+	urlnestedAPI := NewURLNestedAPI(NestedIFrame, "网址导航，上网从这里开始", "http://www.2345mini.com/") // 主页跳转
 	service.AddResource(urlnestedAPI, "/")
 
 	if 0 == setting.APIPort {

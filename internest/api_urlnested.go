@@ -10,6 +10,7 @@ type URLNestedType int
 
 type URLNestedAPI struct {
 	url    string
+	title  string
 	typeof URLNestedType
 }
 
@@ -19,22 +20,23 @@ const (
 	NestedIFrame
 )
 
-func NewURLNestedAPI(nestedType URLNestedType, nestedURL string) *URLNestedAPI {
+func NewURLNestedAPI(nestedType URLNestedType, nestedTitle string, nestedURL string) *URLNestedAPI {
 	return &URLNestedAPI{
 		url:    nestedURL,
+		title:  nestedTitle,
 		typeof: nestedType,
 	}
 }
 
-func (api URLNestedAPI) Get(values webapi.Values, request *http.Request) (int, interface{}, http.Header) {
+func (nested URLNestedAPI) Get(values webapi.Values, request *http.Request) (int, interface{}, http.Header) {
 
-	html := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="gb2312"/><title>hao123_上网从这里开始</title></head><body><iframe src="` + api.url + `" frameborder="0" style="overflow:hidden;overflow-x:hidden;overflow-y:hidden;height:100%;width:100%;position:absolute;top:0px;left:0px;right:0px;bottom:0px" height="100%" width="100%"></iframe></body></html>`
+	html := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="gb2312"/><title>` + nested.title + `</title></head><body><iframe src="` + nested.url + `" frameborder="0" style="overflow:hidden;overflow-x:hidden;overflow-y:hidden;height:100%;width:100%;position:absolute;top:0px;left:0px;right:0px;bottom:0px" height="100%" width="100%"></iframe></body></html>`
 
-	switch api.typeof {
+	switch nested.typeof {
 	case NestedJump:
-		return http.StatusFound, []byte(html), http.Header{"Location": []string{api.url}}
+		return http.StatusFound, []byte(html), http.Header{"Location": []string{nested.url}}
 	case NestedMoved:
-		return http.StatusMovedPermanently, []byte(html), http.Header{"Location": []string{api.url}}
+		return http.StatusMovedPermanently, []byte(html), http.Header{"Location": []string{nested.url}}
 	case NestedIFrame:
 		// 由于 默认IFrame，什么都不执行即可
 	}
