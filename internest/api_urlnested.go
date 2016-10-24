@@ -30,7 +30,14 @@ func NewURLNestedAPI(nestedType URLNestedType, nestedTitle string, nestedURL str
 
 func (nested URLNestedAPI) Get(values webapi.Values, request *http.Request) (int, interface{}, http.Header) {
 
-	html := `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="gb2312"/><title>` + nested.title + `</title></head><body><iframe src="` + nested.url + `" frameborder="0" style="overflow:hidden;overflow-x:hidden;overflow-y:hidden;height:100%;width:100%;position:absolute;top:0px;left:0px;right:0px;bottom:0px" height="100%" width="100%"></iframe></body></html>`
+	html := `<!DOCTYPE html><html lang="zh-cmn-Hans">
+				<head>
+					<meta charset="gb2312"/><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="renderer" content="webkit" /><title>` + nested.title + `</title>
+				</head>
+				<body>
+					<iframe src="` + nested.url + `" frameborder="0" style="overflow:hidden;overflow-x:hidden;overflow-y:hidden;height:100%;width:100%;position:absolute;top:0px;left:0px;right:0px;bottom:0px" height="100%" width="100%"></iframe> 
+				</body>
+			</html>`
 
 	switch nested.typeof {
 	case NestedJump:
