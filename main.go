@@ -142,7 +142,7 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://api.ieceo.cn/20160920/Init/Default/GUID/" + guid
+		url = "http://api.ieceo.cn/20161026/Init/Default/GUID/" + guid
 		//url = "http://api.lp8.com/Init/Default/GUID/" + guid
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
@@ -174,7 +174,7 @@ func main() {
 	os.MkdirAll(logFileDir, 0777)
 
 	logFilePath := logFileDir + "\\youniverse.log"
-	file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE, 0777)
+	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		log.Warning("open log file", logFilePath, "error:", err.Error())
 	}
