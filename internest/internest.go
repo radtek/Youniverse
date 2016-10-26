@@ -118,7 +118,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	service.AddResource(urlnestedAPI, "/")
 
 	if 0 == setting.APIPort {
-		selectPort, err := common.SocketSelectPort("tcp", 10010)
+		selectPort, err := common.SocketSelectPort("tcp", 80)
 		if nil != err {
 			return false, err
 		}
