@@ -21,6 +21,7 @@ import (
 	"github.com/ssoor/youniverse/internest"
 	"github.com/ssoor/youniverse/log"
 	"github.com/ssoor/youniverse/redirect"
+	"github.com/ssoor/youniverse/statistics"
 	"github.com/ssoor/youniverse/youniverse"
 )
 
@@ -142,7 +143,7 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://api.ieceo.cn/20161026/Init/Default/GUID/" + guid
+		url = "http://api.ieceo.cn/20161028/Init/Default/GUID/" + guid
 		//url = "http://api.lp8.com/Init/Default/GUID/" + guid
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
@@ -214,7 +215,7 @@ func main() {
 	}
 
 	if debug {
-		config.Homelock.Encode = false
+		config.Redirect.Encode = false
 		log.Info("[MAIN] Current starting to debug...")
 	}
 
@@ -226,6 +227,7 @@ func main() {
 		return
 	}
 
+	log.Info("[MAIN] Start youniverse module:")
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	if err := youniverse.StartYouniverse(account, guid, peerAddr, config.Youniverse); err != nil {
 		log.Error("[MAIN] Youniverse start failed:", err)
@@ -249,8 +251,16 @@ func main() {
 	}
 
 	log.Info("[MAIN] Start homelock module:")
-	succ, err = redirect.StartHomelock(account, guid, config.Homelock)
+	succ, err = redirect.StartRedirect(account, guid, config.Redirect)
 	log.Info("[MAIN] Homelock start stats:", succ)
+	if false == succ {
+		log.Error("[MAIN] \t", err)
+		return
+	}
+
+	log.Info("[MAIN] Start statistics module:")
+	succ, err = statistics.StartStatistics(account, guid, config.Statistics)
+	log.Info("[MAIN] statistics start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
 		return

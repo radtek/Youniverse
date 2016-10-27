@@ -55,7 +55,7 @@ func runPACServer(pac *socksd.PAC) {
 	}
 }
 
-func StartHomelock(account string, guid string, setting Settings) (bool, error) {
+func StartRedirect(account string, guid string, setting Settings) (bool, error) {
 
 	log.Info("Set messenger encode mode:", setting.Encode)
 
