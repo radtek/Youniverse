@@ -1,10 +1,12 @@
 package api
 
 import (
+	"compress/zlib"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 
 	"github.com/ssoor/youniverse/common"
 
@@ -25,7 +27,19 @@ func Decrypt(base64Code []byte) (decode []byte, err error) {
 		base64Code[i] = base64Code[i] - 0x90
 	}
 
-	if jsonEninfo, err = base64.StdEncoding.DecodeString(string(base64Code)); err != nil {
+	var zipReader io.ReadCloser
+	if zipReader, err = zlib.NewReader(bytes.NewBuffer(base64Code)); nil != err {
+		return nil, err
+	}
+
+	codeBuff := bytes.NewBuffer(nil)
+	if _, err := io.Copy(codeBuff, zipReader); nil != err {
+		zipReader.Close()
+		return nil, err
+	}
+
+	zipReader.Close()
+	if jsonEninfo, err = base64.StdEncoding.DecodeString(codeBuff.String()); err != nil {
 		return nil, err
 	}
 
@@ -35,7 +49,7 @@ func Decrypt(base64Code []byte) (decode []byte, err error) {
 		return nil, err
 	}
 
-	var iv, code []byte
+	var iv, tempBuff []byte
 
 	iv, err = base64.StdEncoding.DecodeString(eninfo.IV)
 
@@ -43,23 +57,32 @@ func Decrypt(base64Code []byte) (decode []byte, err error) {
 		return nil, err
 	}
 
-	code, err = base64.StdEncoding.DecodeString(eninfo.Code)
+	tempBuff, err = base64.StdEncoding.DecodeString(eninfo.Code)
 
 	if err != nil {
 		return nil, err
 	}
 
 	var block cipher.Block
-
 	if block, err = aes.NewCipher(key); err != nil {
 		return nil, err
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(tempBuff, tempBuff)
 
-	mode.CryptBlocks(code, code)
+	if zipReader, err = zlib.NewReader(bytes.NewBuffer(tempBuff)); nil != err {
+		return nil, err
+	}
 
-	return code, nil
+	defer zipReader.Close()
+
+	codeBuff.Reset()
+	if _, err := io.Copy(codeBuff, zipReader); nil != err {
+		return nil, err
+	}
+
+	return codeBuff.Bytes(), nil
 }
 
 func GetURL(srcurl string) (decodeData string, err error) {
