@@ -13,7 +13,7 @@ type HtmlNestedAPI struct {
 }
 
 func NewHtmlNestedAPI(nestedStatus int, nestedData []byte, nestedHeader map[string]string) *HtmlNestedAPI {
-	var htmlHeader http.Header
+	htmlHeader := http.Header{}
 	for name, value := range nestedHeader {
 		htmlHeader.Add(name, value)
 	}

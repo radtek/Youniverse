@@ -15,13 +15,15 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	service.AddResource(statsAPI, "/stats")
 
 	for _, htmlNested := range setting.HtmlNested {
-		htmlNestedAPI := NewHtmlNestedAPI(htmlNested.Status, htmlNested.Data, htmlNested.Header)
+		htmlNestedAPI := NewHtmlNestedAPI(htmlNested.Status, []byte(htmlNested.Data), htmlNested.Header)
 		service.AddResource(htmlNestedAPI, htmlNested.Path)
+		log.Info("Sign resource html nested:", htmlNested.Path, ", status code is", htmlNested.Status, ", http header:", htmlNested.Header)
 	}
 
 	for _, urlNested := range setting.URLNested {
 		urlnestedAPI := NewURLNestedAPI(URLNestedType(urlNested.Type), urlNested.Title, urlNested.URL, urlNested.ScriptURL)
 		service.AddResource(urlnestedAPI, urlNested.Path)
+		log.Info("Sign resource html nested", urlNested.Type, ":<", urlNested.Title, ">", urlNested.Path, ", url is", urlNested.URL, ", script is:", urlNested.ScriptURL)
 	}
 
 	if 0 == setting.APIPort {
@@ -36,7 +38,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	go service.Start(setting.APIPort)
 
 	handle, err := assistant.SetAPIPort(setting.APIPort)
-	log.Info("Setting internest data share handle:", handle, ", err:", err)
+	log.Info("Setting internest", setting.APIPort, ", data share handle:", handle, ", err:", err)
 
 	return true, nil
 }

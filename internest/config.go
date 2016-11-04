@@ -9,7 +9,7 @@ type jsonURLNested struct {
 }
 
 type jsonHtmlNested struct {
-	Data   []byte            `json:"data"`
+	Data   string            `json:"data"`
 	Status int               `json:"status"`
 	Path   string            `json:"path"`
 	Header map[string]string `json:"header"`
