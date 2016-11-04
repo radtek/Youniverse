@@ -4,85 +4,46 @@ import (
 	"compress/zlib"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
-	"encoding/json"
 	"io"
 
 	"github.com/ssoor/youniverse/common"
+	"github.com/ssoor/youniverse/log"
 
 	"bytes"
 	"net/http"
 )
 
-func Decrypt(base64Code []byte) (decode []byte, err error) {
-	type encodeStruct struct {
-		IV   string `json:"iv"`
-		Code string `json:"code"`
-	}
+const APIEnkey = "890161F37139989CFA9433BAF32BDAFB"
 
-	key := []byte("890161F37139989CFA9433BAF32BDAFB")
-	var jsonEninfo []byte
-
+func Decrypt(key string, base64Code []byte) (decode []byte, err error) {
 	for i := 0; i < len(base64Code); i++ {
 		base64Code[i] = base64Code[i] - 0x90
 	}
 
-	var zipReader io.ReadCloser
-	if zipReader, err = zlib.NewReader(bytes.NewBuffer(base64Code)); nil != err {
-		return nil, err
-	}
-
-	codeBuff := bytes.NewBuffer(nil)
-	if _, err := io.Copy(codeBuff, zipReader); nil != err {
-		zipReader.Close()
-		return nil, err
-	}
-
-	zipReader.Close()
-	if jsonEninfo, err = base64.StdEncoding.DecodeString(codeBuff.String()); err != nil {
-		return nil, err
-	}
-
-	eninfo := encodeStruct{}
-
-	if err := json.Unmarshal(jsonEninfo, &eninfo); err != nil {
-		return nil, err
-	}
-
-	var iv, tempBuff []byte
-
-	iv, err = base64.StdEncoding.DecodeString(eninfo.IV)
-
-	if err != nil {
-		return nil, err
-	}
-
-	tempBuff, err = base64.StdEncoding.DecodeString(eninfo.Code)
-
-	if err != nil {
-		return nil, err
-	}
+	iv := base64Code[:16]
+	encode := base64Code[16:]
 
 	var block cipher.Block
-	if block, err = aes.NewCipher(key); err != nil {
+	if block, err = aes.NewCipher([]byte(key)); err != nil {
 		return nil, err
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(tempBuff, tempBuff)
+	log.Error(block.BlockSize())
+	mode.CryptBlocks(encode, encode)
 
-	if zipReader, err = zlib.NewReader(bytes.NewBuffer(tempBuff)); nil != err {
+	var zipReader io.ReadCloser
+	if zipReader, err = zlib.NewReader(bytes.NewBuffer(encode)); nil != err {
 		return nil, err
 	}
-
 	defer zipReader.Close()
 
-	codeBuff.Reset()
-	if _, err := io.Copy(codeBuff, zipReader); nil != err {
+	decodeBuf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(decodeBuf, zipReader); nil != err {
 		return nil, err
 	}
 
-	return codeBuff.Bytes(), nil
+	return decodeBuf.Bytes(), nil
 }
 
 func GetURL(srcurl string) (decodeData string, err error) {
@@ -106,11 +67,11 @@ func GetURL(srcurl string) (decodeData string, err error) {
 
 	bodyBuf.ReadFrom(resp.Body)
 
-	data, err = Decrypt(bodyBuf.Bytes())
+	data, err = Decrypt(APIEnkey, bodyBuf.Bytes())
 	if err != nil {
 		return "", err
 	}
 
-	//log.Info("API <", srcurl, ">", common.GetValidString(data))
+	log.Info("API <", srcurl, ">", common.GetValidString(data))
 	return common.GetValidString(data), nil
 }
