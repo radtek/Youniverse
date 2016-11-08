@@ -3,10 +3,7 @@ package log
 import (
 	"io"
 	"os"
-	"syscall"
 	"time"
-
-	"github.com/ssoor/winapi"
 
 	. "log"
 )
@@ -35,7 +32,6 @@ func SetOutputFile(file *os.File) {
 	Err = New(logWriters, "ERROR ", LstdFlags)
 	Warn = New(logWriters, "WARN ", LstdFlags)
 
-	winapi.SetStdHandle(syscall.STD_ERROR_HANDLE, winapi.HANDLE(file.Fd()))
 }
 
 func Info(v ...interface{}) {

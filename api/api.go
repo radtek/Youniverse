@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/ssoor/youniverse/common"
-	"github.com/ssoor/youniverse/log"
 
 	"bytes"
 	"net/http"
@@ -71,6 +70,5 @@ func GetURL(srcurl string) (decodeData string, err error) {
 		return "", err
 	}
 
-	log.Info("API <", srcurl, ">", common.GetValidString(data))
 	return common.GetValidString(data), nil
 }
