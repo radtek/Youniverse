@@ -29,7 +29,6 @@ func Decrypt(key string, base64Code []byte) (decode []byte, err error) {
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
-	log.Error(block.BlockSize())
 	mode.CryptBlocks(encode, encode)
 
 	var zipReader io.ReadCloser
