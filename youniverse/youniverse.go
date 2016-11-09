@@ -76,15 +76,15 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 	},
 }
 
-func StartYouniverse(account string, guid string, setting Settings) error {
+func StartYouniverse(account string, guid string, setting Settings) (bool, error) {
 	port, err := common.SocketSelectPort("tcp", int(YouniverseListenPort))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
@@ -93,7 +93,7 @@ func StartYouniverse(account string, guid string, setting Settings) error {
 
 	peerUrls, err := getPeers(account, setting.PeersURL, "http://"+peerAddr)
 	if nil != err {
-		return err
+		return false, err
 	}
 
 	log.Info("Set Youiverse peer:", len(peerUrls), peerUrls)
@@ -115,5 +115,5 @@ func StartYouniverse(account string, guid string, setting Settings) error {
 
 	go http.ListenAndServe(peerAddr, http.HandlerFunc(peers.ServeHTTP))
 
-	return nil
+	return true, nil
 }
