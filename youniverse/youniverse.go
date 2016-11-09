@@ -6,14 +6,20 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ssoor/groupcache"
 	"github.com/ssoor/youniverse/api"
+	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
 )
 
 var Resource *groupcache.Group
+
+const (
+	YouniverseListenPort uint16 = 13600
+)
 
 var (
 	ErrorYouniverseUninit = errors.New("youniverse not initialization")
@@ -70,8 +76,18 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 	},
 }
 
-func StartYouniverse(account string, guid string, peerAddr string, setting Settings) error {
+func StartYouniverse(account string, guid string, setting Settings) error {
+	port, err := common.SocketSelectPort("tcp", int(YouniverseListenPort))
+	if err != nil {
+		return err
+	}
 
+	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
+	if err != nil {
+		return err
+	}
+
+	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
 	peers := groupcache.NewHTTPPoolOpts("http://"+peerAddr, GCHTTPPoolOptions)
 	log.Info("Create Youiverse HTTP pool: http://" + peerAddr)
 

