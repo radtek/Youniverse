@@ -23,7 +23,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	for _, urlNested := range setting.URLNested {
 		urlnestedAPI := NewURLNestedAPI(URLNestedType(urlNested.Type), urlNested.Title, urlNested.URL, urlNested.ScriptURL)
 		service.AddResource(urlnestedAPI, urlNested.Path)
-		log.Info("Sign resource html nested", urlNested.Type, ":<", urlNested.Title, ">", urlNested.Path, ", url is", urlNested.URL, ", script is:", urlNested.ScriptURL)
+		log.Info("Sign resource url nested", urlNested.Type, ":<", urlNested.Title, ">", urlNested.Path, ", url is", urlNested.URL, ", script is:", urlNested.ScriptURL)
 	}
 
 	if 0 == setting.APIPort {
