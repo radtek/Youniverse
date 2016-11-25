@@ -143,8 +143,8 @@ func getStartSettings(account string, guid string) (config Config, err error) {
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		//url = "http://api.ieceo.cn/20161108/Init/Default/GUID/" + guid
-		url = "http://api.lp8.com/20161108/Init/Default/GUID/" + guid
+		url = "http://api.ieceo.cn/20161108/Init/Default/GUID/" + guid
+		//url = "http://api.lp8.com/20161108/Init/Default/GUID/" + guid
 		//url = "http://younverse.ssoor.com/test"
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
@@ -212,13 +212,6 @@ func goRun(debug bool, weight uint, guid string, account string) {
 		return
 	}
 
-	log.Info("[MAIN] Start internest module:")
-	succ, err = internest.StartInternest(account, guid, config.Internest)
-	log.Info("[MAIN] Internest start stats:", succ, ", error:", err)
-	if false == succ {
-		return
-	}
-
 	log.Info("[MAIN] Start youniverse module:")
 	succ, err = youniverse.StartYouniverse(account, guid, config.Youniverse)
 	log.Info("[MAIN] Youniverse start stats:", succ, ", error:", err)
@@ -229,6 +222,14 @@ func goRun(debug bool, weight uint, guid string, account string) {
 	log.Info("[MAIN] Start fundadore module:")
 	succ, err = fundadore.StartFundadores(account, guid, config.Fundadore)
 	log.Info("[MAIN] Fundadore start stats:", succ, ", error:", err)
+	if false == succ {
+		return
+	}
+
+	// 由于其内部需要调用一个下发组建,所以需要在下发系统工作完成后执行.
+	log.Info("[MAIN] Start internest module:")
+	succ, err = internest.StartInternest(account, guid, config.Internest)
+	log.Info("[MAIN] Internest start stats:", succ, ", error:", err)
 	if false == succ {
 		return
 	}
