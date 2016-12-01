@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -222,91 +223,72 @@ func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *
 	return tran, resp
 }
 
-func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
-
-	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
-		return "", errors.New("Content type mismatch.")
-	}
-
+func (s *SRules) GetResponseBody(resp *http.Response) (bodyString string, err error) {
 	defer func() {
-
-		if nil != err {
-			log.Warning("Rewrite html failed, err:", err)
-		}
-	}()
-
-	bodyReader := bufio.NewReader(resp.Body)
-
-	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-
-		read, err := gzip.NewReader(resp.Body)
-		if nil != err {
-			err = errors.New(fmt.Sprint("create gzip reader error:", err))
-			return "", err
-		}
-
-		bodyReader = bufio.NewReader(read)
-
-		resp.Header.Del("Content-Encoding")
-	}
-
-	//dumpdata, _ := httputil.DumpResponse(resp, true)
-
-	//log.Println(string(dumpdata))
-
-	var bodyBuf bytes.Buffer
-	if _, err = bodyBuf.ReadFrom(bodyReader); nil != err {
-		return "", err
-	}
-
-	newHTML := bodyBuf.String()
-	if data, err := s.Replace(Rewrite_HTML, resp.Request.URL, newHTML); nil == err {
-		newHTML = data
-		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
-	}
-
-	// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
-	return newHTML, nil
-}
-
-func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
-
-	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/x-javascript") {
-		return "", errors.New("Content type mismatch.")
-	}
-
-	defer func() {
-
 		if nil != err {
 			log.Warning("Rewrite javescript failed, err:", err)
 		}
 	}()
 
 	bodyReader := bufio.NewReader(resp.Body)
-
 	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-
-		read, err := gzip.NewReader(resp.Body)
-		if nil != err {
+		var read *gzip.Reader
+		if read, err = gzip.NewReader(resp.Body); nil != err {
 			err = errors.New(fmt.Sprint("create gzip reader error:", err))
-			return "", err
+			return
 		}
 
 		bodyReader = bufio.NewReader(read)
-
 		resp.Header.Del("Content-Encoding")
 	}
 
+	//dumpdata, _ := httputil.DumpResponse(resp, true)
+	//log.Println(string(dumpdata))
+
 	var bodyBuf bytes.Buffer
-	if _, err = bodyBuf.ReadFrom(bodyReader); nil != err {
-		return "", err
+	_, err = bodyBuf.ReadFrom(bodyReader)
+
+	bodyString = bodyBuf.String()
+	if io.ErrUnexpectedEOF == err {
+		err = nil
+	}
+
+	return
+}
+
+func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
+	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
+		return "", errors.New("Content type mismatch.")
 	}
 
 	var newHTML string
-	if newHTML, err = s.Replace(Rewrite_JaveScript, resp.Request.URL, bodyBuf.String()); err != nil {
-		newHTML = bodyBuf.String()
-	} else {
-		log.Info("Injection javascript", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
+	if newHTML, err = s.GetResponseBody(resp); nil != err {
+		// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
+		return newHTML, nil
+	}
+
+	if data, err := s.Replace(Rewrite_HTML, resp.Request.URL, newHTML); nil == err {
+		newHTML = data
+		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
+	}
+
+	return newHTML, nil // 不能返回错误
+}
+
+func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
+	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/x-javascript") {
+		return "", errors.New("Content type mismatch.")
+	}
+
+	var newHTML string
+	if newHTML, err = s.GetResponseBody(resp); nil != err {
+		// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
+		return newHTML, nil
+	}
+
+	if data, err := s.Replace(Rewrite_JaveScript, resp.Request.URL, newHTML); nil == err {
+		newHTML = data
+		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
 	}
 
 	return newHTML, nil // 不能返回错误
