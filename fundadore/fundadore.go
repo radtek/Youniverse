@@ -71,7 +71,7 @@ func implementationResource(resourceType string, filePath string, execParameter 
 	case "res":
 		return true, nil
 	case "runexe":
-		exec_cmd := exec.Command(filePath, "-fundadores", execParameter)
+		exec_cmd := exec.Command(filePath, execParameter)
 		if err := exec_cmd.Start(); nil != err {
 			return false, err
 		}
