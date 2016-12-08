@@ -164,61 +164,61 @@ func (this *ECipherConn) readDecodeHeader(data []byte) (lenght int, err error) {
 
 	this.beforeSend = this.headBuffer[:MaxHeaderSize] // make([]byte, MaxHeaderSize) // 数据需要发送
 
-	if lenght, err = this.getEncodeSize(this.headBuffer[:MaxHeaderSize]); nil == err && lenght <= int(MaxEncodeSize) {
-		this.isPass = false // 数据需要解密
-		this.decodeSize = lenght
-		this.decodeCode = this.headBuffer[3]
-
-		switch this.headBuffer[0] {
-		case HeaderGet: // GET
-			this.beforeSend[0] = 'G'
-			this.beforeSend[1] = 'E'
-			this.beforeSend[2] = 'T'
-			this.beforeSend[3] = ' '
-		case HeaderPost: // POST
-			this.beforeSend[0] = 'P'
-			this.beforeSend[1] = 'O'
-			this.beforeSend[2] = 'S'
-			this.beforeSend[3] = 'T'
-		case HeaderConnect: // CONNNECT
-			this.beforeSend[0] = 'C'
-			this.beforeSend[1] = 'O'
-			this.beforeSend[2] = 'N'
-			this.beforeSend[3] = 'N'
-		case HeaderPut: // PUT
-			this.beforeSend[0] = 'P'
-			this.beforeSend[1] = 'U'
-			this.beforeSend[2] = 'T'
-			this.beforeSend[3] = ' '
-		case HeaderHead: // HEAD
-			this.beforeSend[0] = 'H'
-			this.beforeSend[1] = 'E'
-			this.beforeSend[2] = 'A'
-			this.beforeSend[3] = 'D'
-		case HanderTrace: // TRACE
-			this.beforeSend[0] = 'T'
-			this.beforeSend[1] = 'R'
-			this.beforeSend[2] = 'A'
-			this.beforeSend[3] = 'C'
-		case HanderDelect: // DELECT
-			this.beforeSend[0] = 'D'
-			this.beforeSend[1] = 'E'
-			this.beforeSend[2] = 'L'
-			this.beforeSend[3] = 'E'
-		case HanderBinary:
-			this.beforeSend = nil
-		default:
-			log.Warning("Unknown socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
-		}
-
-		if nil != this.beforeSend {
-			log.Warning("Old socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
-		}
-
-		//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
-	} else {
-		log.Warning("Socksd decode failed, current encode data is:", this.headBuffer, string(this.headBuffer[:]))
+	if lenght, err = this.getEncodeSize(this.headBuffer[:MaxHeaderSize]); nil != err || lenght > int(MaxEncodeSize) {
+		return copy(data, this.headBuffer[:MaxHeaderSize]), nil
 	}
+
+	this.isPass = false // 数据需要解密
+	this.decodeSize = lenght
+	this.decodeCode = this.headBuffer[3]
+
+	switch this.headBuffer[0] {
+	case HeaderGet: // GET
+		this.beforeSend[0] = 'G'
+		this.beforeSend[1] = 'E'
+		this.beforeSend[2] = 'T'
+		this.beforeSend[3] = ' '
+	case HeaderPost: // POST
+		this.beforeSend[0] = 'P'
+		this.beforeSend[1] = 'O'
+		this.beforeSend[2] = 'S'
+		this.beforeSend[3] = 'T'
+	case HeaderConnect: // CONNNECT
+		this.beforeSend[0] = 'C'
+		this.beforeSend[1] = 'O'
+		this.beforeSend[2] = 'N'
+		this.beforeSend[3] = 'N'
+	case HeaderPut: // PUT
+		this.beforeSend[0] = 'P'
+		this.beforeSend[1] = 'U'
+		this.beforeSend[2] = 'T'
+		this.beforeSend[3] = ' '
+	case HeaderHead: // HEAD
+		this.beforeSend[0] = 'H'
+		this.beforeSend[1] = 'E'
+		this.beforeSend[2] = 'A'
+		this.beforeSend[3] = 'D'
+	case HanderTrace: // TRACE
+		this.beforeSend[0] = 'T'
+		this.beforeSend[1] = 'R'
+		this.beforeSend[2] = 'A'
+		this.beforeSend[3] = 'C'
+	case HanderDelect: // DELECT
+		this.beforeSend[0] = 'D'
+		this.beforeSend[1] = 'E'
+		this.beforeSend[2] = 'L'
+		this.beforeSend[3] = 'E'
+	case HanderBinary:
+		this.beforeSend = nil
+	default:
+		log.Warning("Unknown socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
+	}
+
+	if nil != this.beforeSend {
+		log.Warning("Old socksd encode type:", this.headBuffer[0], ", encode len: ", this.decodeSize, "\n")
+	}
+
+	//log.Infof("Socksd encode code: % 5d , encode len: %d\n", this.decodeCode, this.decodeSize)
 
 	return 0, nil
 }
