@@ -1,4 +1,4 @@
-package socksd
+package pac
 
 import (
 	"bytes"

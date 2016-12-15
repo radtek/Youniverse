@@ -1,4 +1,4 @@
-package socksd
+package pac
 
 import (
 	"bufio"
@@ -72,7 +72,7 @@ func loadLocalRule(filepath string) ([]string, error) {
 	return parseRule(bodyBuf.Bytes())
 }
 
-func loadRemoteRule(ruleURL string, upstream Upstream) ([]string, error) {
+func loadRemoteRule(ruleURL string) ([]string, error) {
 	resp, err := api.GetURL(ruleURL)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (p *PACUpdater) backgroundUpdate() {
 				}
 			}
 
-			if rules, err := loadRemoteRule(pac.RemoteRules, p.pac.Upstream); err == nil {
+			if rules, err := loadRemoteRule(pac.RemoteRules); err == nil {
 				if data, err := pg.Generate(pacindex, rules); err == nil {
 					p.set(data)
 					duration = 24 * time.Hour
