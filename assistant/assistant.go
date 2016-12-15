@@ -72,3 +72,25 @@ func SetBusinessData(addrPACSocket SOCKADDR_IN, addrEncodeSocket SOCKADDR_IN) (i
 
 	return int32(ret), nil
 }
+
+func SetBusinessData2(addrPACSocket SOCKADDR_IN, addrHTTPSocket SOCKADDR_IN, addrHTTPSSocket SOCKADDR_IN) (int32, error) {
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
+	if err != nil {
+		return 0, err
+	}
+
+	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "SetBusinessData2")
+	if err != nil {
+		return 0, err
+	}
+
+	ret, _, _ := syscall.Syscall(addrFuncation, 3,
+		uintptr(unsafe.Pointer(&addrPACSocket)),
+		uintptr(unsafe.Pointer(&addrHTTPSocket)),
+		uintptr(unsafe.Pointer(&addrHTTPSSocket)),
+	)
+
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+
+	return int32(ret), nil
+}

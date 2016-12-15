@@ -25,7 +25,7 @@ var (
 	ErrorStartEncodeModule error = errors.New("Start encode module failed")
 )
 
-func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
+func runHTTPProxy(encode bool, proxie socksd.Proxies, srules []byte) {
 	waitTime := float32(1)
 
 	router := socksd.BuildUpstreamRouter(proxie)
@@ -40,7 +40,23 @@ func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
 		common.ChanSignalExit <- os.Kill
 
 		waitTime += waitTime * 0.618
-		log.Warning("Start proxy unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		log.Warning("Start http proxy unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
+		time.Sleep(time.Duration(waitTime) * time.Second)
+	}
+}
+
+func runHTTPSProxy(proxie socksd.Proxies, srules []byte) {
+	waitTime := float32(1)
+
+	router := socksd.BuildUpstreamRouter(proxie)
+
+	for {
+		socksd.StartHTTPSProxy(proxie, router, []byte(srules))
+
+		common.ChanSignalExit <- os.Kill
+
+		waitTime += waitTime * 0.618
+		log.Warning("Start https proxy unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
 	}
 }
@@ -78,6 +94,7 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 	log.Info("Creating an internal server:")
 
 	log.Info("\tHTTP Protocol:", proxie.HTTP)
+	log.Info("\tHTTPS Protocol:", proxie.HTTPS)
 	log.Info("\tSOCKS5 Protocol:", proxie.SOCKS5)
 
 	for _, upstream := range proxie.Upstreams {
@@ -90,6 +107,7 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 		return false, ErrorSettingQuery
 	}
 
+	go runHTTPSProxy(proxie, []byte(srules))
 	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
 
 	pacAddr := connInternalIP + ":" + strconv.FormatUint(uint64(PACListenPort), 10)
@@ -110,19 +128,26 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 	}
 
 	if setting.Encode {
-		listenHTTP := pac.Rules[0].Proxy
-		encodeport, err := strconv.ParseUint(listenHTTP[strings.LastIndexByte(listenHTTP, ':')+1:], 10, 16)
+		portHTTPProxy, err := strconv.ParseUint(proxie.HTTP[strings.LastIndexByte(proxie.HTTP, ':')+1:], 10, 16)
+		if err != nil {
+			log.Warning("Parse encode port failed, err:", err)
+			return true, ErrorStartEncodeModule
+		}
+		portHTTPSProxy, err := strconv.ParseUint(proxie.HTTPS[strings.LastIndexByte(proxie.HTTPS, ':')+1:], 10, 16)
 		if err != nil {
 			log.Warning("Parse encode port failed, err:", err)
 			return true, ErrorStartEncodeModule
 		}
 
 		pacAddr := SocketCreateSockAddr(connInternalIP, uint16(PACListenPort))
-		encodeAddr := SocketCreateSockAddr(connInternalIP, uint16(encodeport))
+		httpAddr := SocketCreateSockAddr(connInternalIP, uint16(portHTTPProxy))
+		httpsAddr := SocketCreateSockAddr(connInternalIP, uint16(portHTTPSProxy))
 
-		handle, err := assistant.SetBusinessData(pacAddr, encodeAddr)
-		log.Info("Setting redirect data share handle:", handle, ", err:", err)
-
+		log.Info("Setting redirect data share:")
+		handle, err := assistant.SetBusinessData(pacAddr, httpAddr)
+		log.Info("\thandle:", handle, ", err:", err)
+		handle, err = assistant.SetBusinessData2(pacAddr, httpAddr, httpsAddr)
+		log.Info("\thandle2:", handle, ", err2:", err)
 	}
 
 	return true, nil

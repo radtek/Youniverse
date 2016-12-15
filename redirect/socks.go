@@ -13,17 +13,19 @@ var (
 	ErrorSocketUnavailable error = errors.New("socket port not find")
 )
 
-func CreateSocksdProxy(userGUID string, ipAddr string, upstream []Upstream) (Proxy, error) {
+func CreateSocksdProxy(userGUID string, ipAddr string, upstream []Upstream) (Proxies, error) {
 	portHttp, _ := common.SocketSelectPort("tcp")
+	portHttps, _ := common.SocketSelectPort("tcp")
 	portSocket4, _ := common.SocketSelectPort("tcp")
 	portSocket5, _ := common.SocketSelectPort("tcp")
 
 	if 0 == portHttp || 0 == portSocket5 {
-		return Proxy{}, ErrorSocketUnavailable
+		return Proxies{}, ErrorSocketUnavailable
 	}
 
-	proxy := Proxy{
+	proxy := Proxies{
 		HTTP:      ipAddr + ":" + strconv.Itoa(portHttp),
+		HTTPS:     ipAddr + ":" + strconv.Itoa(portHttps),
 		SOCKS4:    ipAddr + ":" + strconv.Itoa(portSocket4),
 		SOCKS5:    ipAddr + ":" + strconv.Itoa(portSocket5),
 		Upstreams: upstream,
@@ -32,14 +34,7 @@ func CreateSocksdProxy(userGUID string, ipAddr string, upstream []Upstream) (Pro
 	return proxy, nil
 }
 
-func CreateSocksdPAC(guid string, addr string, proxie Proxy, upstream Upstream, bricksURL string) (*pac.PAC, error) {
-	portHttp, _ := common.SocketSelectPort("tcp")
-	portSocket5, _ := common.SocketSelectPort("tcp")
-
-	if 0 == portHttp || 0 == portSocket5 {
-		return nil, ErrorSocketUnavailable
-	}
-
+func CreateSocksdPAC(guid string, addr string, proxie Proxies, upstream Upstream, bricksURL string) (*pac.PAC, error) {
 	cfgPAC := &pac.PAC{
 		Address: addr,
 		Rules: []pac.PACRule{

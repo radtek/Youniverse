@@ -14,8 +14,9 @@ type Upstream struct {
 	Address  string `json:"address"`
 }
 
-type Proxy struct {
+type Proxies struct {
 	HTTP            string     `json:"http"`
+	HTTPS           string     `json:"https"`
 	SOCKS4          string     `json:"socks4"`
 	SOCKS5          string     `json:"socks5"`
 	Crypto          string     `json:"crypto"`
@@ -25,8 +26,8 @@ type Proxy struct {
 }
 
 type Config struct {
-	PAC     pac.PAC `json:"pac"`
-	Proxies []Proxy `json:"proxies"`
+	PAC     pac.PAC   `json:"pac"`
+	Proxies []Proxies `json:"proxies"`
 }
 
 func LoadConfig(s string) (*Config, error) {

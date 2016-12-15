@@ -26,7 +26,7 @@ func BuildUpstream(upstream Upstream, forward socks.Dialer) (socks.Dialer, error
 	return nil, errors.New("unknown upstream type" + upstream.Type)
 }
 
-func BuildUpstreamRouter(conf Proxy) socks.Dialer {
+func BuildUpstreamRouter(conf Proxies) socks.Dialer {
 	var allForward []socks.Dialer
 	for _, upstream := range conf.Upstreams {
 		var forward socks.Dialer
@@ -46,7 +46,7 @@ func BuildUpstreamRouter(conf Proxy) socks.Dialer {
 	return NewUpstreamDialer(allForward)
 }
 
-func runSOCKS4Server(conf Proxy, forward socks.Dialer) {
+func runSOCKS4Server(conf Proxies, forward socks.Dialer) {
 	if conf.SOCKS4 != "" {
 		listener, err := net.Listen("tcp", conf.SOCKS4)
 		if err != nil {
@@ -67,7 +67,7 @@ func runSOCKS4Server(conf Proxy, forward socks.Dialer) {
 	}
 }
 
-func runSOCKS5Server(conf Proxy, forward socks.Dialer) {
+func runSOCKS5Server(conf Proxies, forward socks.Dialer) {
 	if conf.SOCKS5 != "" {
 		listener, err := net.Listen("tcp", conf.SOCKS5)
 		if err != nil {

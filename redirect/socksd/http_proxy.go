@@ -8,14 +8,14 @@ import (
 	"github.com/ssoor/youniverse/log"
 )
 
-func StartHTTPProxy(conf Proxy, router socks.Dialer, data []byte) {
+func StartHTTPProxy(conf Proxies, router socks.Dialer, data []byte) {
 	httpProxy := socks.NewHTTPProxy("http", router, NewHTTPTransport(router, data))
 	if err := http.ListenAndServe(conf.HTTP, httpProxy); nil != err {
 		log.Error("Start HTTP proxy at ", conf.HTTP, " failed, err:", err)
 	}
 }
 
-func StartEncodeHTTPProxy(conf Proxy, router socks.Dialer, data []byte) {
+func StartEncodeHTTPProxy(conf Proxies, router socks.Dialer, data []byte) {
 	if conf.HTTP != "" {
 		listener, err := net.Listen("tcp", conf.HTTP)
 		if err != nil {
