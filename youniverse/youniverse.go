@@ -17,10 +17,6 @@ import (
 
 var Resource *groupcache.Group
 
-const (
-	YouniverseListenPort uint16 = 13600
-)
-
 var (
 	ErrorYouniverseUninit = errors.New("youniverse not initialization")
 )
@@ -77,7 +73,7 @@ var GCHTTPPoolOptions *groupcache.HTTPPoolOptions = &groupcache.HTTPPoolOptions{
 }
 
 func StartYouniverse(account string, guid string, setting Settings) (bool, error) {
-	port, err := common.SocketSelectPort("tcp", int(YouniverseListenPort))
+	port, err := common.SocketSelectPort("tcp")
 	if err != nil {
 		return false, err
 	}

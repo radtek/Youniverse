@@ -97,16 +97,19 @@ func GetMACs() (MACs []string, err error) {
 	return MACs, nil
 }
 
-func SocketSelectPort(port_type string, port_base int) (int16, error) {
+// 得到一个可用的端口.
+func SocketSelectPort(port_type string) (port int, err error) {
+	listener, err := net.Listen(port_type, "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
 
-	for ; port_base < 65536; port_base++ {
-		tcpListener, err := net.Listen(port_type, ":"+strconv.Itoa(port_base))
-
-		if err == nil {
-			tcpListener.Close()
-			return int16(port_base), nil
-		}
+	addr := listener.Addr().String()
+	_, portString, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0, err
 	}
 
-	return 0, ErrorSocketUnavailable
+	return strconv.Atoi(portString)
 }

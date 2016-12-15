@@ -27,7 +27,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 	}
 
 	if 0 == setting.APIPort {
-		selectPort, err := common.SocketSelectPort("tcp", 80)
+		selectPort, err := common.SocketSelectPort("tcp")
 		if nil != err {
 			return false, err
 		}
