@@ -3,6 +3,8 @@ package socksd
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"github.com/ssoor/youniverse/redirect/pac"
 )
 
 type Upstream struct {
@@ -10,21 +12,6 @@ type Upstream struct {
 	Crypto   string `json:"crypto"`
 	Password string `json:"password"`
 	Address  string `json:"address"`
-}
-
-type PACRule struct {
-	Name        string `json:"name"`
-	Proxy       string `json:"proxy"`
-	SOCKS4      string `json:"socks4"`
-	SOCKS5      string `json:"socks5"`
-	LocalRules  string `json:"local_rule_file"`
-	RemoteRules string `json:"remote_rule_file"`
-}
-
-type PAC struct {
-	Rules    []PACRule `json:"rules"`
-	Address  string    `json:"address"`
-	Upstream Upstream  `json:"upstream"`
 }
 
 type Proxy struct {
@@ -38,7 +25,7 @@ type Proxy struct {
 }
 
 type Config struct {
-	PAC     PAC     `json:"pac"`
+	PAC     pac.PAC `json:"pac"`
 	Proxies []Proxy `json:"proxies"`
 }
 

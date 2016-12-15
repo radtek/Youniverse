@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/ssoor/youniverse/redirect/pac"
 	. "github.com/ssoor/youniverse/redirect/socksd"
 )
 
@@ -27,7 +28,7 @@ func SocketSelectPort(port_type string, port_base int) (int, error) {
 	return 0, ErrorSocketUnavailable
 }
 
-func CreateSocksdProxy(userGUID string,ipAddr string, upstream []Upstream) (Proxy, error) {
+func CreateSocksdProxy(userGUID string, ipAddr string, upstream []Upstream) (Proxy, error) {
 	portHttp, _ := SocketSelectPort("tcp", 60000)
 	portSocket4, _ := SocketSelectPort("tcp", portHttp+1)
 	portSocket5, _ := SocketSelectPort("tcp", portSocket4+1)
@@ -46,7 +47,7 @@ func CreateSocksdProxy(userGUID string,ipAddr string, upstream []Upstream) (Prox
 	return proxy, nil
 }
 
-func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream,bricksURL string) (*PAC, error) {
+func CreateSocksdPAC(guid string, addr string, proxie Proxy, upstream Upstream, bricksURL string) (*pac.PAC, error) {
 	portHttp, _ := SocketSelectPort("tcp", 60000)
 	portSocket5, _ := SocketSelectPort("tcp", portHttp+1)
 
@@ -54,10 +55,9 @@ func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream,br
 		return nil, ErrorSocketUnavailable
 	}
 
-	pac := &PAC{
-		Address:  addr,
-		Upstream: upstream,
-		Rules: []PACRule{
+	cfgPAC := &pac.PAC{
+		Address: addr,
+		Rules: []pac.PACRule{
 			{
 				Name:   "default_proxy",
 				Proxy:  proxie.HTTP,
@@ -68,6 +68,5 @@ func CreateSocksdPAC(guid string, addr string,proxie Proxy, upstream Upstream,br
 		},
 	}
 
-	return pac, nil
+	return cfgPAC, nil
 }
-

@@ -11,6 +11,7 @@ import (
 	"github.com/ssoor/youniverse/assistant"
 	"github.com/ssoor/youniverse/common"
 	"github.com/ssoor/youniverse/log"
+	"github.com/ssoor/youniverse/redirect/pac"
 	"github.com/ssoor/youniverse/redirect/socksd"
 )
 
@@ -44,11 +45,11 @@ func runHTTPProxy(encode bool, proxie socksd.Proxy, srules []byte) {
 	}
 }
 
-func runPACServer(pac *socksd.PAC) {
+func runPACServer(cfgPAC *pac.PAC) {
 	waitTime := float32(1)
 
 	for {
-		socksd.StartPACServer(*pac)
+		pac.StartPACServer(*cfgPAC)
 		waitTime += waitTime * 0.618
 		log.Warning("Start PAC server unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
