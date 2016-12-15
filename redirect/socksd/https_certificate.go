@@ -1,0 +1,377 @@
+package socksd
+
+import (
+	"crypto/tls"
+	"errors"
+	"log"
+
+	"github.com/square/certstrap/pkix"
+)
+
+const (
+	CARootKey string = `-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----`
+	CARootCert string = `-----BEGIN CERTIFICATE-----
+MIIJzzCCBbegAwIBAgIJAO0GVOaT5NSZMA0GCSqGSIb3DQEBCwUAMH0xCzAJBgNV
+BAYTAkNOMR4wHAYDVQQKDBVZb3VuaXZlcnNlIFJlZGVtcHRpb24xITAfBgNVBAsM
+GFlvdW5pdmVyc2UgVHJ1c3QgTmV0d29yazErMCkGA1UEAwwiWW91bml2ZXJzZSBD
+ZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTAgFw0xNjA2MTcwNDIzMzVaGA8yMjkwMDQw
+MTA0MjMzNVowfTELMAkGA1UEBhMCQ04xHjAcBgNVBAoMFVlvdW5pdmVyc2UgUmVk
+ZW1wdGlvbjEhMB8GA1UECwwYWW91bml2ZXJzZSBUcnVzdCBOZXR3b3JrMSswKQYD
+VQQDDCJZb3VuaXZlcnNlIENlcnRpZmljYXRpb24gQXV0aG9yaXR5MIIEIjANBgkq
+hkiG9w0BAQEFAAOCBA8AMIIECgKCBAEA1fIQFokp99nag8kjQzO4wtVhV9OBVXCV
+YeRmJ/3DFlJ2Av1kzd+7OsDdZc+rkP0e2fyO6hapZm/V/su0PittSkyaNtbdhQI5
+W9FCXhvIU4w6jPkIDFXWsyjQcfy5YkXI7NpXn2yvYQWlzzGHYtZqUQNIEk6bQwiJ
+COBUFqjkY0xCUyXeL4K1vhjUQ9ucbjTCRN0QUoqps0p9HtUsC09Q5YHoT0R4wQLi
+CbqWJco9xMS8ZG73EMvnMnCxj4pqfWXhNDUQ8TkMxn9+Q/Qlv5jSJXcmk1evG9sr
+mxjIR7GGft1YZzO/WR3aDHdHVic+Dlk+EgUjuaQ535QWfw53nM0EfLPMfZOROwx9
+2CecNwbv0rFPZE745w3rSZCnxQzk9brZEpizmD0syZTqFHyDRST7JxRaJffIqF45
+wE2gTh0rAqKSH1d4Fy3YpKSTT2DYpNPS3UhF7u3CPIHagS5DU9cCmzGBMy4bSfUN
+mJMTfzLFuj0USXeBOntcT/Esv6k+ME6x8gveKuRlqdd0qFjen9n9Ds328UstyN01
+l5CdwnOBN9L3sR0RsQwKVyw/bLtHz4DKEfcbxQYP2MH1/7cuRqxQ4HZahYTq38lX
+HG+qgZBcK1ULgWZ5+yHE/8HTvWVncjyuGiWIf2PHbVpir+mu7t+w22H1tv0zujPw
+0wTp3fQacydG1Dr/QqoZYagg3Xjz3juFHR/YA3rf33yd21bmMc4HPl6MLXM9x/WU
+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
+GGaY57BOarhwIsosw44WeKGhSA==
+-----END CERTIFICATE-----`
+	CAIntermediateKey string = `-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----`
+	CAIntermediateCert string = `-----BEGIN CERTIFICATE-----
+MIIJtDCCBZygAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwfTELMAkGA1UEBhMCQ04x
+HjAcBgNVBAoMFVlvdW5pdmVyc2UgUmVkZW1wdGlvbjEhMB8GA1UECwwYWW91bml2
+ZXJzZSBUcnVzdCBOZXR3b3JrMSswKQYDVQQDDCJZb3VuaXZlcnNlIENlcnRpZmlj
+YXRpb24gQXV0aG9yaXR5MCAXDTE2MDYxNzA0MjMzN1oYDzIyOTAwNDAxMDQyMzM3
+WjCBkzExMC8GA1UEAwwoWW91bml2ZXJzZSBDbGFzcyAzIFNlY3VyZSBTZXJ2ZXIg
+Q0EgLSBHNDEOMAwGA1UECAwFQ2hpbmExCzAJBgNVBAYTAkNOMR4wHAYDVQQKDBVZ
+b3VuaXZlcnNlIFJlZGVtcHRpb24xITAfBgNVBAsMGFlvdW5pdmVyc2UgVHJ1c3Qg
+TmV0d29yazCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALnL76W2RxHr
+rewta6A1lbgZdC5sTU0NIP6VsU+ubR6cOmFspgK27xv8Bz+EJuS/w0alDdeDX4Zk
++M+WCUX8Z0x9BhDdg+9Y7xzDSEfxc9sdViMxg6udwCqi5TyBYi19DTlRFrpXy8Do
+Lg+zYRpetdToXGKSZXdSzVm+UNd3ZQ16aB1CJ2HJ+695GEhZ1udFpbHfoPQC+UUT
+2jqEc8xrrQ/4hE1jnSUggCnoWPnsMs1l+oBZg+cZ2vINnaXCxKxP70Qmuz6a9hdK
+EMUTV2UI7JiL1N/+qh/hglRbBQZ70neQo9fenyNu2SIThe5fqN0dI1XcDDnKgF19
+bhcU1YISsND1GKIEwGy0IGf+HpZBB7W6KQuKaUuEzGMD7ePEGlg3VrE1Um0QbiPq
+lWhdXkRhNK6MOatqLuNJLhVvW8CAKlyy2DHoV/KnN1wJcEHiZNAoFzw0ge/hCNSJ
+cPcvBdJ2q4Tj8Hh6ynlxrcvoY70OoFa9HMTMv4fuSesgqBo28G/yz6X0VjGsnk9f
+/EC0Eh99K6PmldFPMrG748lF87TyNmiXkGHyhED5QIcXMhaJeYO10OPfqzomPoGD
+qexhIIH2h9YTmbrgOtDMgcyCkMDxesGFyw3ilCgGUKofgG5demigOwbCgvIS2nVO
+tQYUFSaf7Psyg50nVRjGI1Y5QpM2UN5fAgMBAAGjggIjMIICHzAPBgNVHRMBAf8E
+BTADAQH/MB0GA1UdDgQWBBT0500pn0eVX+/6c/Sihq3SnsOtvTAfBgNVHSMEGDAW
+gBTZiJoYu+/UgTqQnpwPDBrzHm1sbTALBgNVHQ8EBAMCAaYwEwYDVR0lBAwwCgYI
+KwYBBQUHAwEwMwYDVR0RBCwwKoIoWW91bml2ZXJzZSBDbGFzcyAzIFNlY3VyZSBT
+ZXJ2ZXIgQ0EgLSBHNDCBgQYDVR0fBHoweDA6oDigNoY0aHR0cDovL3d3dy55b3Vu
+aXZlcnNlLmNvbS9Zb3VuaXZlcnNlSW50ZXJtaWRpYXRlLmNybDA6oDigNoY0aHR0
+cDovL3d3dy55b3VuaXZlcnNlLmNvbS9Zb3VuaXZlcnNlSW50ZXJtaWRpYXRlLmNy
+bDCB8AYIKwYBBQUHAQEEgeMwgeAwQQYIKwYBBQUHMAKGNWh0dHA6Ly93d3cueW91
+bml2ZXJzZS5jb20vWW91bml2ZXJzZUludGVybWVkaWF0ZTEuY3J0MEEGCCsGAQUF
+BzAChjVodHRwOi8vd3d3LnlvdW5pdmVyc2UuY29tL1lvdW5pdmVyc2VJbnRlcm1l
+ZGlhdGUxLmNydDArBggrBgEFBQcwAYYfaHR0cDovL3d3dy55b3VuaXZlcnNlLmNv
+bS9vY3NwLzArBggrBgEFBQcwAYYfaHR0cDovL3d3dy55b3VuaXZlcnNlLmNvbS9v
+Y3NwLzANBgkqhkiG9w0BAQsFAAOCBAEAQF0NkcuGpJngLCUTs1JHnlhV9bEzzcJ8
+oMUYM5gEMrZ+C1o/q+Dr3p3wYa0BKazy2zxOPlCmzsh6m8K9vonTTjA5SBqiCk9D
+op0A8wxwq2B4KxE0sVK4McBkyQ7LRc8A8oWCsoNSWlWkYMXDeLuESl+0hLvjqwfJ
+pvOxezdQy4C/AQTlHWegDMWGqiqsyFUc9sx9ueTJFkAnseeCQXZOCd5TGSgDmR7b
+7W+OGMWd66vPLe+e/Z07VMHFLDMa4s355X8fU3Uj7frBdUB3DUYTi79zz7So4uJY
+qssE+GH2uogNy8fv+xtr/q3zW7696SdXMFyuq652HI49YQ8zsRCtadAbxzIScvvy
+bi9O/pqDyw48hX5zHgzvMHAoTEYPCJAfRV+sbJBiM/oNPZ3M5RnMyT4sIib0VQYq
+uNjyWuvYHiFcHRUhdTHZZvcQVRWzY9yFoQv/t3BFR4T90jhAiNxRBJKCgIKIrMDi
+4LCdEUspSBOWmppJFypXn19QzpFDtdF96PZynN0pFQlWQJ+3atJ1YW9zIFMVSzJw
+U+KK1pB3Ujj49ohMakCoHrgVj8X2N8K1dKIiviV4rc/Ap5q+g2MR6Z8hutcfgTEo
+D0mrNFmetZwleauFp9hRlLZXde0SREeOiJmz8pUrq3YMtY+iCnkiB1qMWZ9RpcVv
++yPaX23tajbMK6id9f2SKAd020WTkZqrSVnfuz9kJaQCPi0GDl4J3RdPQ90vqYal
+pCdLOfqiVYHD0fUMqzSKfujkyUrjjyItapbiMLsEJetA+xQf2SbWGvJ5QXyyoJVT
+WCKdYue8vmF04qyapV35zPiBkI2dXZq6B9MRZ1ecRvwy9ZBnBhMapcdvHyUv+V/8
+ZC+P66Awsgo1x/P1hT/BzUpqOpSWSEewvU62wl/TWrFz5KkRYJQ2iPFQoBDwSvvc
+mPpRbpyTVjQIZadUXK/U0C05Wfx8Du2BVNpdSINM0P9Zr4UJvjKmZ2EK+JobbFYr
+IieF0mHAteh3ala3CuQVk7mZCyRviNjH1AusgcQINPoQkWjDFbcKo6esYaGqIHvk
+bKO782hzKNN2YqRO2oui8n/GFYnnvlh721ybsFg8tZouUTxD7DMngivmFBWUxwWF
+XFvXyc156zWY7uLrlHVXT4toxkYKEzuebnK/LlGVtI0OeO2Z3Pmdv8l367bnnz/M
+TbyFCMW2hIwfXMRpPnWlp90I50/J/6Rf8bpSOr788AEQ1I9BZpBsCXczfU6ojGD3
+8XcJsltNSKkRcs43DxFtGzuByJ8w5WpgCvMsUt5r4wpS1K/VsSV/Kuzr9k1fHhbn
+w9eZGdAOcXT8zniIa5tIpP9maJA65wQjdjUiwYiIaXRAf6DjK886nA==
+-----END CERTIFICATE-----`
+)
+
+type certKeyPair struct {
+	cert *pkix.Certificate
+	key  *pkix.Key
+}
+
+func (p *certKeyPair) toX509Pair() tls.Certificate {
+	cb, err := p.cert.Export()
+	if err != nil {
+		log.Fatalln("Export cert failed:", err)
+	}
+	kb, err := p.key.ExportPrivate()
+	if err != nil {
+		log.Fatalln("Export private failed:", err)
+	}
+	cert, err := tls.X509KeyPair(cb, kb)
+	if err != nil {
+		log.Fatalln("Make X509 KeyPair failed:", err)
+	}
+	return cert
+}
+
+func QueryTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
+	//var certPair certKeyPair
+
+	// if depot.CheckCertificate(certLib, host) {
+	// 	if certPair.cert, err = depot.GetCertificate(certLib, host); err != nil {
+	// 		log.Println("Load cert failed:", err)
+	// 		return nil, err
+	// 	}
+
+	// 	if certPair.key, err = depot.GetPrivateKey(certLib, host); err != nil {
+	// 		log.Println("Load cert failed:", err)
+	// 		return nil, err
+	// 	}
+
+	// 	certx509Pair := certPair.toX509Pair()
+	// 	return &certx509Pair, nil
+	// }
+
+	if cert := tlsCerts[host]; nil != cert {
+		return cert, nil
+	}
+	return nil, errors.New("not find certificate")
+}
+
+var (
+	tlsCerts map[string]*tls.Certificate = make(map[string]*tls.Certificate)
+)
+
+func GetCAIntermediatePair() (certPair *certKeyPair, err error) {
+	var key *pkix.Key
+	var cert *pkix.Certificate
+
+	if key, err = pkix.NewKeyFromPrivateKeyPEM([]byte(CAIntermediateKey)); nil != err {
+		return nil, err
+	}
+
+	if cert, err = pkix.NewCertificateFromPEM([]byte(CAIntermediateCert)); nil != err {
+		return nil, err
+	}
+
+	return &certKeyPair{cert: cert, key: key}, nil
+}
+
+func CreateTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
+	var key *pkix.Key
+	var cert *pkix.Certificate
+
+	if key, err = pkix.CreateRSAKey(4096); err != nil {
+		log.Println("Create RSA key failed:", err)
+		return nil, err
+	}
+
+	csr, err := pkix.CreateCertificateSigningRequest(key, "Youniverse Trust Network", nil, []string{host}, "Youniverse Redemption", "CN", "China", "Beijing", host)
+	if err != nil {
+		log.Println("Create CSR failed:", err)
+		return nil, err
+	}
+	var certPair *certKeyPair
+	if certPair, err = GetCAIntermediatePair(); nil != err {
+		log.Println("Get CA Intermediate failed:", err)
+		return nil, err
+	}
+
+	if cert, err = pkix.CreateCertificateHost(certPair.cert, certPair.key, csr, 200); err != nil {
+		log.Println("Create cert failed:", err)
+		return nil, err
+	}
+
+	// if err = depot.PutPrivateKey(certLib, host, key); err != nil {
+	// 	log.Println("Save key failed:", err)
+	// 	return nil, err
+	// }
+
+	// if err = depot.PutCertificate(certLib, host, cert); err != nil {
+	// 	log.Println("Save cert failed:", err)
+	// 	return nil, err
+	// }
+
+	certPair.key = key
+	certPair.cert = cert
+	certx509Pair := certPair.toX509Pair()
+	tlsCerts[host] = &certx509Pair
+	return &certx509Pair, nil
+}
