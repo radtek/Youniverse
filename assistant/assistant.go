@@ -44,7 +44,27 @@ func SetAPIPort(port int) (int32, error) {
 	}
 
 	ret, _, _ := syscall.Syscall(addrFuncation, 1,
-		uintptr(unsafe.Pointer(&port)),
+		uintptr(port),
+		0, 0)
+
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+
+	return int32(ret), nil
+}
+
+func SetAPIPort2(port int) (int32, error) {
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
+	if err != nil {
+		return 0, err
+	}
+
+	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "SetAPIPort2")
+	if err != nil {
+		return SetAPIPort(port)
+	}
+
+	ret, _, _ := syscall.Syscall(addrFuncation, 1,
+		uintptr(port),
 		0, 0)
 
 	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
@@ -73,22 +93,20 @@ func SetBusinessData(addrPACSocket SOCKADDR_IN, addrEncodeSocket SOCKADDR_IN) (i
 	return int32(ret), nil
 }
 
-func SetBusinessData2(addrPACSocket SOCKADDR_IN, addrHTTPSocket SOCKADDR_IN, addrHTTPSSocket SOCKADDR_IN) (int32, error) {
+func SetBusinessData2(count int, addrHTTPSocket []SOCKADDR_IN) (int32, error) {
 	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
 	if err != nil {
 		return 0, err
 	}
-
 	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "SetBusinessData2")
 	if err != nil {
-		return 0, err
+		return SetBusinessData(addrHTTPSocket[0], addrHTTPSocket[1])
 	}
 
 	ret, _, _ := syscall.Syscall(addrFuncation, 3,
-		uintptr(unsafe.Pointer(&addrPACSocket)),
-		uintptr(unsafe.Pointer(&addrHTTPSocket)),
-		uintptr(unsafe.Pointer(&addrHTTPSSocket)),
-	)
+		uintptr(count),
+		uintptr(unsafe.Pointer(&addrHTTPSocket[0])),
+		0)
 
 	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
 

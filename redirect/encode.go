@@ -8,6 +8,7 @@ import (
 )
 
 func SocketCreateSockAddr(host string, port uint16) (addrSocket assistant.SOCKADDR_IN) {
+	addrSocket.Sin_family = 2 // AF_INET
 	binary.BigEndian.PutUint16(addrSocket.Sin_port[0:], port)
 
 	ipv4 := net.ParseIP(host)

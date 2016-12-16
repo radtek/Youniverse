@@ -37,7 +37,7 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 
 	go service.Start(setting.APIPort)
 
-	handle, err := assistant.SetAPIPort(setting.APIPort)
+	handle, err := assistant.SetAPIPort2(setting.APIPort)
 	log.Info("Setting internest", setting.APIPort, ", data share handle:", handle, ", err:", err)
 
 	return true, nil
