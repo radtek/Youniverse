@@ -19,6 +19,9 @@ var domains_{{.Name}} = {
 {{end}}
 
 function FindProxyForURL(url, host) {
+	if (url.substring(0, 6) == "https:") {
+        return 'DIRECT';
+    }
 	if (isPlainHostName(host) || host === '127.0.0.1' || host === 'localhost') {
         return 'DIRECT';
     }
