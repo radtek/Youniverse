@@ -338,7 +338,7 @@ func CreateTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
 	var key *pkix.Key
 	var cert *pkix.Certificate
 
-	if key, err = pkix.CreateRSAKey(4096); err != nil {
+	if key, err = pkix.CreateRSAKey(1024); err != nil {
 		log.Println("Create RSA key failed:", err)
 		return nil, err
 	}
