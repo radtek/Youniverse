@@ -31,8 +31,8 @@ func Get(ctx groupcache.Context, key string, dest *[]byte) error {
 	return Resource.Get(ctx, key, groupcache.AllocatingByteSliceSink(dest))
 }
 
-func getPeers(guid string, url string, peer_addr string) ([]string, error) {
-	url = url + "?peer=" + peer_addr
+func getPeers(guid string, url, ip, peer_addr string) ([]string, error) {
+	url = url + "?ip=" + ip + "&peer=" + peer_addr
 
 	json_peers, err := api.GetURL(url)
 	if err != nil {
@@ -87,7 +87,7 @@ func StartYouniverse(account string, guid string, setting Settings) (bool, error
 	peers := groupcache.NewHTTPPoolOpts("http://"+peerAddr, GCHTTPPoolOptions)
 	log.Info("Create Youiverse HTTP pool: http://" + peerAddr)
 
-	peerUrls, err := getPeers(account, setting.PeersURL, "http://"+peerAddr)
+	peerUrls, err := getPeers(account, setting.PeersURL, connInternalIP, "http://"+peerAddr)
 	if nil != err {
 		return false, err
 	}
