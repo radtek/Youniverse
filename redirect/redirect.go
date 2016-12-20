@@ -146,7 +146,7 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 		proiexsAddrs[2] = SocketCreateSockAddr(connInternalIP, uint16(portHTTPSProxy))
 
 		if err = socksd.AddCertificateToSystemStore(); nil != err {
-			//addrNumber = 2 // https 服务器初始化失败
+			addrNumber = 2 // https 服务器初始化失败
 			log.Warning("Add certificate to system stroe failed, err:", err)
 		}
 
