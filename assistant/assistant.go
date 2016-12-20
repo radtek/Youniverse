@@ -32,6 +32,50 @@ func StartBusiness() (int32, error) {
 	return int32(ret), nil
 }
 
+func AddCertificateContextToStore(storeName string, certEncodingType int32, certData []byte, certSize int32) (int32, error) {
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
+	if err != nil {
+		return 0, err
+	}
+
+	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "AddCertificateContextToStore")
+	if err != nil {
+		return 0, err
+	}
+
+	ret, _, _ := syscall.Syscall6(addrFuncation, 4,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(storeName))),
+		uintptr(certEncodingType),
+		uintptr(unsafe.Pointer(&certData[0])),
+		uintptr(certSize),
+		0, 0)
+
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+
+	return int32(ret), nil
+}
+
+func AddCertificateCryptContextToStore(storeName string, certSRC string) (int32, error) {
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
+	if err != nil {
+		return 0, err
+	}
+
+	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "AddCertificateCryptContextToStore")
+	if err != nil {
+		return 0, err
+	}
+
+	ret, _, _ := syscall.Syscall(addrFuncation, 2,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(storeName))),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(certSRC))),
+		0)
+
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+
+	return int32(ret), nil
+}
+
 func SetAPIPort(port int) (int32, error) {
 	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
 	if err != nil {

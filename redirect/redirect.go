@@ -139,13 +139,19 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 			return true, ErrorStartEncodeModule
 		}
 
+		var addrNumber int = 3
 		var proiexsAddrs [3]assistant.SOCKADDR_IN
 		proiexsAddrs[0] = SocketCreateSockAddr(connInternalIP, uint16(PACListenPort))
 		proiexsAddrs[1] = SocketCreateSockAddr(connInternalIP, uint16(portHTTPProxy))
 		proiexsAddrs[2] = SocketCreateSockAddr(connInternalIP, uint16(portHTTPSProxy))
 
-		log.Info("Setting redirect data share:")
-		handle, err := assistant.SetBusinessData2(3, proiexsAddrs[:])
+		if err = socksd.AddCertificateToSystemStore(); nil != err {
+			//addrNumber = 2 // https 服务器初始化失败
+			log.Warning("Add certificate to system stroe failed, err:", err)
+		}
+
+		log.Info("Setting redirect data share(", addrNumber, "):")
+		handle, err := assistant.SetBusinessData2(addrNumber, proiexsAddrs[:])
 		log.Info("\thandle:", handle, ", err:", err)
 	}
 
