@@ -88,7 +88,7 @@ func SetAPIPort(port int) (int32, error) {
 	}
 
 	ret, _, _ := syscall.Syscall(addrFuncation, 1,
-		uintptr(port),
+		uintptr(unsafe.Pointer(&port)),
 		0, 0)
 
 	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
