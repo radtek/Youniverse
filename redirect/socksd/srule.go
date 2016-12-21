@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,11 +65,13 @@ func NewSRules(forward socks.Dialer) *SRules {
 			Dial: func(network, addr string) (net.Conn, error) {
 				return forward.Dial(network, addr)
 			},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 		tranpoort_local: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
 				return socks.Direct.Dial(network, addr)
 			},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 		urlMatch: make(map[int]*compiler.URLMatch),
 	}
