@@ -61,7 +61,7 @@ func (econn *ECipherConn) Read(data []byte) (lenght int, err error) {
 	if econn.isPass { // 后续数据不用解密 ,直接调用原始函数 - isPass 由 readDecodeHeader() 函数设置
 		lenght, err = econn.rwc.Read(data)
 
-		if 0 != lenght && econn.headBuffer[0] >= 'A' && econn.headBuffer[0] <= 'z' {
+		if 0 != lenght && data[0] >= 'A' && data[0] <= 'z' {
 			//log.Warning(string(data[:lenght]))
 		}
 		return
