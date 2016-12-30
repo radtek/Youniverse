@@ -6,3 +6,9 @@ type Upstream struct {
 	Password string `json:"password"`
 	Address  string `json:"address"`
 }
+
+type Setting struct {
+	IntervalTime int        `json:"interval_time"`
+	DNSCacheTime int        `json:"dnscache_time"`
+	Upstreams    []Upstream `json:"services"`
+}

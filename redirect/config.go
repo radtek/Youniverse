@@ -1,13 +1,9 @@
 package redirect
 
-import (
-	"github.com/ssoor/youniverse/redirect/socksd"
-)
-
 type Settings struct {
-	PAC       bool              `json:"pac"`
-	Encode    bool              `json:"encode"`
-	RulesURL  string            `json:"rules_url"`
-	BricksURL string            `json:"bricks_url"`
-	Upstreams []socksd.Upstream `json:"services"`
+	PAC          bool   `json:"pac"`
+	Encode       bool   `json:"encode"`
+	RulesURL     string `json:"rules_url"`
+	BricksURL    string `json:"bricks_url"`
+	UpstreamsURL string `json:"services_url"`
 }

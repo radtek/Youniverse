@@ -84,6 +84,9 @@ func runPACServer(addr string, addrHTTP string, bricksURL string) {
 func StartRedirect(account string, guid string, setting Settings) (bool, error) {
 	var err error = nil
 
+	var connInternalIP string = "127.0.0.1"
+	//connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
+
 	log.Info("Set messenger encode mode:", setting.Encode)
 	if err != nil {
 		log.Error("Query connection ip failed:", err)
@@ -96,13 +99,7 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 		return false, ErrorSettingQuery
 	}
 
-	for _, upstream := range setting.Upstreams {
-		log.Info("Setting messenger server information:", upstream.Address)
-	}
-
-	var connInternalIP string = "127.0.0.1"
-	//connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
-	streamRouter := socksd.BuildUpstreamRouter(0, setting.Upstreams)
+	streamRouter := socksd.NewUpstreamDialer(setting.UpstreamsURL)
 
 	addrHTTP, _ := common.SocketSelectAddr("tcp", connInternalIP)
 	go runHTTPProxy(addrHTTP, streamRouter, setting.Encode, []byte(srules))
