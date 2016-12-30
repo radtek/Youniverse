@@ -5,9 +5,9 @@ import (
 )
 
 type Settings struct {
-	PAC   bool              `json:"pac"`
-	Encode   bool              `json:"encode"`
-	RulesURL string            `json:"rules_url"`
+	PAC       bool              `json:"pac"`
+	Encode    bool              `json:"encode"`
+	RulesURL  string            `json:"rules_url"`
 	BricksURL string            `json:"bricks_url"`
-	Services []socksd.Upstream `json:"services"`
+	Upstreams []socksd.Upstream `json:"services"`
 }
