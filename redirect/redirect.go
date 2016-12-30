@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/ssoor/socks"
 	"github.com/ssoor/youniverse/api"
 	"github.com/ssoor/youniverse/assistant"
 	"github.com/ssoor/youniverse/common"
@@ -25,16 +25,14 @@ var (
 	ErrorStartEncodeModule error = errors.New("Start encode module failed")
 )
 
-func runHTTPProxy(encode bool, proxie socksd.Proxies, srules []byte) {
+func runHTTPProxy(addr string, streamRouter socks.Dialer, encode bool, srules []byte) {
 	waitTime := float32(1)
-
-	router := socksd.BuildUpstreamRouter(proxie)
 
 	for {
 		if encode {
-			socksd.StartEncodeHTTPProxy(proxie, router, []byte(srules))
+			socksd.StartEncodeHTTPProxy(addr, streamRouter, []byte(srules))
 		} else {
-			socksd.StartHTTPProxy(proxie, router, []byte(srules))
+			socksd.StartHTTPProxy(addr, streamRouter, []byte(srules))
 		}
 
 		common.ChanSignalExit <- os.Kill
@@ -45,13 +43,11 @@ func runHTTPProxy(encode bool, proxie socksd.Proxies, srules []byte) {
 	}
 }
 
-func runHTTPSProxy(proxie socksd.Proxies, srules []byte) {
+func runHTTPSProxy(addr string, streamRouter socks.Dialer, srules []byte) {
 	waitTime := float32(1)
 
-	router := socksd.BuildUpstreamRouter(proxie)
-
 	for {
-		socksd.StartHTTPSProxy(proxie, router, []byte(srules))
+		socksd.StartHTTPSProxy(addr, streamRouter, []byte(srules))
 
 		common.ChanSignalExit <- os.Kill
 
@@ -61,11 +57,24 @@ func runHTTPSProxy(proxie socksd.Proxies, srules []byte) {
 	}
 }
 
-func runPACServer(cfgPAC *pac.PAC) {
+func runPACServer(addr string, addrHTTP string, bricksURL string) {
 	waitTime := float32(1)
 
+	pacConfig := pac.PAC{
+		Address: addr,
+		Rules: []pac.PACRule{
+			{
+				Name:  "default_proxy",
+				Proxy: addrHTTP,
+				//SOCKS5: proxie.SOCKS5,
+				//LocalRules: "default_rules.txt",
+				RemoteRules: bricksURL,
+			},
+		},
+	}
+
 	for {
-		pac.StartPACServer(*cfgPAC)
+		pac.StartPACServer(pacConfig)
 		waitTime += waitTime * 0.618
 		log.Warning("Start PAC server unrecognized error, the terminal service will restart in", int(waitTime), "seconds ...")
 		time.Sleep(time.Duration(waitTime) * time.Second)
@@ -73,32 +82,12 @@ func runPACServer(cfgPAC *pac.PAC) {
 }
 
 func StartRedirect(account string, guid string, setting Settings) (bool, error) {
+	var err error = nil
 
 	log.Info("Set messenger encode mode:", setting.Encode)
-
-	var err error = nil
-	var connInternalIP string = "127.0.0.1"
-	//connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
 	if err != nil {
 		log.Error("Query connection ip failed:", err)
 		return false, ErrorStartEncodeModule
-	}
-
-	proxie, err := CreateSocksdProxy(account, connInternalIP, setting.Services)
-
-	if err != nil {
-		log.Error("Create messenger angel config failed, err:", err)
-		return false, ErrorSocksdCreate
-	}
-
-	log.Info("Creating an internal server:")
-
-	log.Info("\tHTTP Protocol:", proxie.HTTP)
-	log.Info("\tHTTPS Protocol:", proxie.HTTPS)
-	log.Info("\tSOCKS5 Protocol:", proxie.SOCKS5)
-
-	for _, upstream := range proxie.Upstreams {
-		log.Info("Setting messenger server information:", upstream.Address)
 	}
 
 	srules, err := api.GetURL(setting.RulesURL)
@@ -107,47 +96,62 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 		return false, ErrorSettingQuery
 	}
 
-	go runHTTPSProxy(proxie, []byte(srules))
-	go runHTTPProxy(setting.Encode, proxie, []byte(srules))
+	for _, upstream := range setting.Upstreams {
+		log.Info("Setting messenger server information:", upstream.Address)
+	}
 
-	pacAddr := connInternalIP + ":" + strconv.FormatUint(uint64(PACListenPort), 10)
-	pac, err := CreateSocksdPAC(account, pacAddr, proxie, socksd.Upstream{}, setting.BricksURL)
+	var connInternalIP string = "127.0.0.1"
+	//connInternalIP, err := common.GetConnectIP("tcp", "www.baidu.com:80")
+	streamRouter := socksd.BuildUpstreamRouter(0, setting.Upstreams)
+
+	addrHTTP, _ := common.SocketSelectAddr("tcp", connInternalIP)
+	go runHTTPProxy(addrHTTP, streamRouter, setting.Encode, []byte(srules))
+
+	addrHTTPS, _ := common.SocketSelectAddr("tcp", connInternalIP)
+	go runHTTPSProxy(addrHTTPS, streamRouter, []byte(srules))
+
+	log.Info("Creating an internal server:")
+
+	log.Info("\tHTTP Protocol:", addrHTTP)
+	log.Info("\tHTTPS Protocol:", addrHTTPS)
 
 	if err != nil {
 		log.Error("Create messenger pac config failed, err:", err)
 		return false, ErrorSocksdCreate
 	}
 
-	go runPACServer(pac)
+	addrPAC := connInternalIP + ":" + strconv.Itoa(int(PACListenPort))
+	go runPACServer(addrPAC, addrHTTP, setting.BricksURL)
 
 	if setting.PAC {
-		pacUrl := "http://" + pacAddr + "/proxy.pac"
+		pacURL := "http://" + addrPAC + "/proxy.pac"
 
-		succ, err := SetPACProxy(pacUrl)
-		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pacUrl, succ, err)
+		succ, err := SetPACProxy(pacURL)
+		log.Infof("Setting system browser pac information: %s, stats %t:%v\n", pacURL, succ, err)
 	}
 
 	if setting.Encode {
-		portHTTPProxy, err := strconv.ParseUint(proxie.HTTP[strings.LastIndexByte(proxie.HTTP, ':')+1:], 10, 16)
-		if err != nil {
-			log.Warning("Parse encode port failed, err:", err)
-			return true, ErrorStartEncodeModule
-		}
-		portHTTPSProxy, err := strconv.ParseUint(proxie.HTTPS[strings.LastIndexByte(proxie.HTTPS, ':')+1:], 10, 16)
-		if err != nil {
-			log.Warning("Parse encode port failed, err:", err)
-			return true, ErrorStartEncodeModule
-		}
-
 		var addrNumber int = 3
 		var proiexsAddrs [3]assistant.SOCKADDR_IN
-		proiexsAddrs[0] = SocketCreateSockAddr(connInternalIP, uint16(PACListenPort))
-		proiexsAddrs[1] = SocketCreateSockAddr(connInternalIP, uint16(portHTTPProxy))
-		proiexsAddrs[2] = SocketCreateSockAddr(connInternalIP, uint16(portHTTPSProxy))
 
 		if err = socksd.AddCertificateToSystemStore(); nil != err {
 			addrNumber = 2 // https 服务器初始化失败
 			log.Warning("Add certificate to system stroe failed, err:", err)
+		}
+
+		if proiexsAddrs[0], err = SocketCreateSockAddr(addrPAC); nil != err {
+			log.Warning("Parse PAC port failed, stoping set data, err:", err)
+			return true, ErrorStartEncodeModule
+		}
+
+		if proiexsAddrs[1], err = SocketCreateSockAddr(addrHTTP); nil != err {
+			log.Warning("Parse HTTP port failed, stoping set data, err:", err)
+			return true, ErrorStartEncodeModule
+		}
+
+		if proiexsAddrs[2], err = SocketCreateSockAddr(addrHTTPS); nil != err {
+			log.Warning("Parse HTTPS port failed, stoping set data, err:", err)
+			return true, ErrorStartEncodeModule
 		}
 
 		log.Info("Setting redirect data share(", addrNumber, "):")
