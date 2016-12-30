@@ -97,19 +97,43 @@ func GetMACs() (MACs []string, err error) {
 	return MACs, nil
 }
 
+// 得到地址对应的端口.
+func SocketGetPortFormAddr(addr string) (host string, port uint16, err error) {
+	var intPort int
+	var portString string
+
+	if host, portString, err = net.SplitHostPort(addr); err != nil {
+		return "", 0, err
+	}
+
+	if intPort, err = strconv.Atoi(portString); err != nil {
+		return "", 0, err
+	}
+
+	port = uint16(intPort)
+	return host, port, nil
+}
+
 // 得到一个可用的端口.
-func SocketSelectPort(port_type string) (port int, err error) {
+func SocketSelectPort(port_type string) (port uint16, err error) {
 	listener, err := net.Listen(port_type, "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
 	defer listener.Close()
 
-	addr := listener.Addr().String()
-	_, portString, err := net.SplitHostPort(addr)
-	if err != nil {
-		return 0, err
-	}
+	_, port, err = SocketGetPortFormAddr(listener.Addr().String())
 
-	return strconv.Atoi(portString)
+	return port, err
+}
+
+// 得到一个可用的端口.
+func SocketSelectAddr(port_type string, ip string) (addr string, err error) {
+	listener, err := net.Listen(port_type, ip+":0")
+	if err != nil {
+		return "", err
+	}
+	defer listener.Close()
+
+	return listener.Addr().String(), nil
 }
