@@ -8,18 +8,18 @@ import (
 	"github.com/ssoor/youniverse/log"
 )
 
-func StartHTTPProxy(conf Proxies, router socks.Dialer, data []byte) {
+func StartHTTPProxy(addr string, router socks.Dialer, data []byte) {
 	httpProxy := socks.NewHTTPProxy("http", router, NewHTTPTransport(router, data))
-	if err := http.ListenAndServe(conf.HTTP, httpProxy); nil != err {
-		log.Error("Start HTTP proxy at ", conf.HTTP, " failed, err:", err)
+	if err := http.ListenAndServe(addr, httpProxy); nil != err {
+		log.Error("Start HTTP proxy at ", addr, " failed, err:", err)
 	}
 }
 
-func StartEncodeHTTPProxy(conf Proxies, router socks.Dialer, data []byte) {
-	if conf.HTTP != "" {
-		listener, err := net.Listen("tcp", conf.HTTP)
+func StartEncodeHTTPProxy(addr string, router socks.Dialer, data []byte) {
+	if addr != "" {
+		listener, err := net.Listen("tcp", addr)
 		if err != nil {
-			log.Error("net.Listen at ", conf.HTTP, " failed, err:", err)
+			log.Error("net.Listen at ", addr, " failed, err:", err)
 			return
 		}
 

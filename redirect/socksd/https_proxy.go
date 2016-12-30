@@ -46,18 +46,18 @@ func HTTPSGetCertificate(clientHello *tls.ClientHelloInfo) (cert *tls.Certificat
 	return CreateTlsCertificate(clientHello.ServerName)
 }
 
-func StartHTTPSProxy(conf Proxies, router socks.Dialer, data []byte) {
+func StartHTTPSProxy(addr string, router socks.Dialer, data []byte) {
 	serverHTTPS := &http.Server{
 		ErrorLog: log.Warn,
 		TLSConfig: &tls.Config{
 			GetCertificate: HTTPSGetCertificate,
 		},
 
-		Addr:    conf.HTTPS,
+		Addr:    addr,
 		Handler: &HTTPSProxyHandler{proxy: socks.NewHTTPProxy("https", router, NewHTTPTransport(router, data))},
 	}
 
 	if err := serverHTTPS.ListenAndServeTLS("", ""); nil != err {
-		log.Error("Start HTTP proxy at ", conf.HTTP, " failed, err:", err)
+		log.Error("Start HTTP proxy at ", addr, " failed, err:", err)
 	}
 }
