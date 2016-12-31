@@ -28,9 +28,9 @@ func SetOutputFile(file *os.File) {
 
 	logWriters := io.MultiWriter(writers...)
 
-	Out = New(logWriters, "INFO ", LstdFlags)
-	Err = New(logWriters, "ERROR ", LstdFlags)
-	Warn = New(logWriters, "WARN ", LstdFlags)
+	Out = New(logWriters, "INFO\t", LstdFlags)
+	Err = New(logWriters, "ERROR\t", LstdFlags)
+	Warn = New(logWriters, "WARN\t", LstdFlags)
 
 }
 

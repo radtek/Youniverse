@@ -33,7 +33,7 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 	var data []byte
 
 	if err := youniverse.Get(nil, resourceKey, &data); nil != err {
-		return 0, errors.New(fmt.Sprintln(resourceKey, "download failed:", err))
+		return 0, err
 	}
 
 	dataHash := getMD5(data)
@@ -66,7 +66,7 @@ func downloadResourceToFile(resourceKey string, checkHash string, fileName strin
 	return writeSize, nil
 }
 
-func implementationResource(resourceType string, filePath string, execParameter string) (bool, error) {
+func implementationResource(resourceOSType string, resourceType string, filePath string, execParameter string) (bool, error) {
 	switch resourceType {
 	case "res":
 		return true, nil
@@ -149,7 +149,7 @@ func StartFundadores(account string, guid string, setting Settings) (bool, error
 
 			defer func(res Task) { // 执行函数
 				if false == downloadFailed { // 如果下载没有失败的话, 启动
-					succ, err := implementationResource(res.Save.Type, res.Save.Path, res.Save.Param)
+					succ, err := implementationResource(res.Save.Type, res.Save.Type, res.Save.Path, res.Save.Param)
 
 					log.Info("Fundadores implementation resource", res.Name, fmt.Sprintf("(%s)", res.Save.Type), ", stats is:", succ)
 					log.Info("\tPath is", res.Save.Path, ", parameters is", res.Save.Param)

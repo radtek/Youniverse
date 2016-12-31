@@ -30,7 +30,7 @@ func (b *Backend) Get(key string) (data []byte, err error) {
 
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			err = errors.New(fmt.Sprint("backend download resource ", baseURL+key, " failed, interface result stats: ", resp.StatusCode))
+			err = errors.New(fmt.Sprint("request ", baseURL+key, " failed, interface result stats: ", resp.StatusCode))
 			continue
 		}
 
