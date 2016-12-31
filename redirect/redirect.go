@@ -25,14 +25,14 @@ var (
 	ErrorStartEncodeModule error = errors.New("Start encode module failed")
 )
 
-func runHTTPProxy(addr string, streamRouter socks.Dialer, encode bool, srules []byte) {
+func runHTTPProxy(addr string, streamRouter socks.Dialer, transport *socksd.HTTPTransport, encode bool) {
 	waitTime := float32(1)
 
 	for {
 		if encode {
-			socksd.StartEncodeHTTPProxy(addr, streamRouter, []byte(srules))
+			socksd.StartEncodeHTTPProxy(addr, streamRouter, transport)
 		} else {
-			socksd.StartHTTPProxy(addr, streamRouter, []byte(srules))
+			socksd.StartHTTPProxy(addr, streamRouter, transport)
 		}
 
 		common.ChanSignalExit <- os.Kill
@@ -43,11 +43,11 @@ func runHTTPProxy(addr string, streamRouter socks.Dialer, encode bool, srules []
 	}
 }
 
-func runHTTPSProxy(addr string, streamRouter socks.Dialer, srules []byte) {
+func runHTTPSProxy(addr string, streamRouter socks.Dialer, transport *socksd.HTTPTransport) {
 	waitTime := float32(1)
 
 	for {
-		socksd.StartHTTPSProxy(addr, streamRouter, []byte(srules))
+		socksd.StartHTTPSProxy(addr, streamRouter, transport)
 
 		common.ChanSignalExit <- os.Kill
 
@@ -99,13 +99,14 @@ func StartRedirect(account string, guid string, setting Settings) (bool, error) 
 		return false, ErrorSettingQuery
 	}
 
-	streamRouter := socksd.NewUpstreamDialer(setting.UpstreamsURL)
+	router := socksd.NewUpstreamDialer(setting.UpstreamsURL)
+	transport := socksd.NewHTTPTransport(router, []byte(srules))
 
 	addrHTTP, _ := common.SocketSelectAddr("tcp", connInternalIP)
-	go runHTTPProxy(addrHTTP, streamRouter, setting.Encode, []byte(srules))
+	go runHTTPProxy(addrHTTP, router, transport, setting.Encode)
 
 	addrHTTPS, _ := common.SocketSelectAddr("tcp", connInternalIP)
-	go runHTTPSProxy(addrHTTPS, streamRouter, []byte(srules))
+	go runHTTPSProxy(addrHTTPS, router, transport)
 
 	log.Info("Creating an internal server:")
 

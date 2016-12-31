@@ -47,7 +47,7 @@ func HTTPSGetCertificate(clientHello *tls.ClientHelloInfo) (cert *tls.Certificat
 	return CreateTlsCertificate(clientHello.ServerName, -(365 * 24 * time.Hour), 200)
 }
 
-func StartHTTPSProxy(addr string, router socks.Dialer, data []byte) {
+func StartHTTPSProxy(addr string, router socks.Dialer, tran *HTTPTransport) {
 	serverHTTPS := &http.Server{
 		ErrorLog: log.Warn,
 		TLSConfig: &tls.Config{
@@ -55,7 +55,7 @@ func StartHTTPSProxy(addr string, router socks.Dialer, data []byte) {
 		},
 
 		Addr:    addr,
-		Handler: &HTTPSProxyHandler{proxy: socks.NewHTTPProxy("https", router, NewHTTPTransport(router, data))},
+		Handler: &HTTPSProxyHandler{proxy: socks.NewHTTPProxy("https", router, tran)},
 	}
 
 	if err := serverHTTPS.ListenAndServeTLS("", ""); nil != err {
