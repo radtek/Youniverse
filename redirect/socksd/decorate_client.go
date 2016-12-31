@@ -3,9 +3,12 @@ package socksd
 import (
 	"net"
 
+	"errors"
+
 	"github.com/ssoor/socks"
-	"github.com/ssoor/youniverse/log"
 )
+
+var ErrorUpStaeamDail error = errors.New("forward connect service failed.")
 
 type DecorateClient struct {
 	forward    socks.Dialer
@@ -23,7 +26,6 @@ func NewDecorateClient(forward socks.Dialer, ds ...ConnDecorator) *DecorateClien
 func (d *DecorateClient) Dial(network, address string) (net.Conn, error) {
 	conn, err := d.forward.Dial(network, address)
 	if err != nil {
-		log.Error("DecorateClient forward.Dial failed, err:", err, address)
 		return nil, err
 	}
 	dconn, err := DecorateConn(conn, d.decorators...)

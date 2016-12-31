@@ -8,6 +8,7 @@ type Upstream struct {
 }
 
 type Setting struct {
+	DialTimeout  int        `json:"dial_timeout"`
 	IntervalTime int        `json:"interval_time"`
 	DNSCacheTime int        `json:"dnscache_time"`
 	Upstreams    []Upstream `json:"services"`

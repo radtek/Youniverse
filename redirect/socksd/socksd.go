@@ -25,7 +25,7 @@ type UpstreamDialer struct {
 func NewUpstreamDialer(url string) *UpstreamDialer {
 	dialer := &UpstreamDialer{
 		url:     url,
-		dialers: []socks.Dialer{NewDecorateDirect(0)}, // 原始连接,不经过任何处理
+		dialers: []socks.Dialer{NewDecorateDirect(0, 0)}, // 原始连接,不经过任何处理
 	}
 
 	go dialer.backgroundUpdateServices()
@@ -69,7 +69,7 @@ func buildSetting(setting Setting) []socks.Dialer {
 	for _, upstream := range setting.Upstreams {
 		var forward socks.Dialer
 		var err error
-		forward = NewDecorateDirect(setting.DNSCacheTime)
+		forward = NewDecorateDirect(setting.DNSCacheTime, setting.DialTimeout)
 		forward, err = buildUpstream(upstream, forward)
 		if err != nil {
 			log.Warning("failed to BuildUpstream, err:", err)
@@ -77,8 +77,9 @@ func buildSetting(setting Setting) []socks.Dialer {
 		}
 		allForward = append(allForward, forward)
 	}
+
 	if len(allForward) == 0 {
-		router := NewDecorateDirect(setting.DNSCacheTime)
+		router := NewDecorateDirect(setting.DNSCacheTime, setting.DialTimeout)
 		allForward = append(allForward, router)
 	}
 
@@ -110,26 +111,44 @@ func (u *UpstreamDialer) backgroundUpdateServices() {
 	}
 }
 
-func (u *UpstreamDialer) getNextDialer() socks.Dialer {
+func (u *UpstreamDialer) CallNextDialer(network, address string) (conn net.Conn, err error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
-	index := u.index
-	u.index++
-	if u.index >= len(u.dialers) {
-		u.index = 0
-	}
-	if index < len(u.dialers) {
-		return u.dialers[index]
-	}
-	panic("unreached")
-}
+	for {
+		if 0 == len(u.dialers) {
+			return socks.Direct.Dial(network, address)
+		}
 
-func (u *UpstreamDialer) Dial(network, address string) (net.Conn, error) {
-	router := u.getNextDialer()
-	conn, err := router.Dial(network, address)
-	if err != nil {
-		log.Error("UpstreamDialer router.Dial failed, err:", err, network, address)
+		if u.index++; u.index >= len(u.dialers) {
+			u.index = 0
+		}
+
+		if conn, err = u.dialers[u.index].Dial(network, address); nil == err {
+			break
+		}
+
+		switch err.(type) {
+		case *net.OpError:
+			if strings.EqualFold("dial", err.(*net.OpError).Op) {
+				copy(u.dialers[u.index:], u.dialers[u.index+1:])
+				u.dialers = u.dialers[:len(u.dialers)-1]
+
+				log.Warning("Socks dial", network, address, "failed, delete current dialer:", err.(*net.OpError).Addr, ", err:", err)
+				continue
+			}
+		}
+
 		return nil, err
 	}
+
+	return conn, err
+}
+
+func (u *UpstreamDialer) Dial(network, address string) (conn net.Conn, err error) {
+	if conn, err = u.CallNextDialer(network, address); nil != err {
+		log.Warning("Upstream dial ", network, address, " failed, err:", err)
+		return nil, err
+	}
+
 	return conn, nil
 }

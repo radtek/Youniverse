@@ -44,12 +44,12 @@ func Decrypt(key string, base64Code []byte) (decode []byte, err error) {
 	return decodeBuf.Bytes(), nil
 }
 
-func GetURL(srcurl string) (decodeData string, err error) {
+func GetURL(url string) (decodeData string, err error) {
 	var data []byte
 
 	var resp *http.Response
 	for i := 0; i < 3; i++ {
-		if resp, err = http.Get(srcurl); nil != err {
+		if resp, err = http.Get(url); nil != err {
 			continue
 		}
 
@@ -69,6 +69,8 @@ func GetURL(srcurl string) (decodeData string, err error) {
 	if err != nil {
 		return "", err
 	}
+
+	//log.Info("<", url, ">", common.GetValidString(data))
 
 	return common.GetValidString(data), nil
 }
