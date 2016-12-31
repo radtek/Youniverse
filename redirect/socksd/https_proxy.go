@@ -3,6 +3,7 @@ package socksd
 import (
 	"crypto/tls"
 	"net/http"
+	"time"
 
 	"github.com/ssoor/socks"
 	"github.com/ssoor/youniverse/log"
@@ -43,7 +44,7 @@ func HTTPSGetCertificate(clientHello *tls.ClientHelloInfo) (cert *tls.Certificat
 		return cert, err
 	}
 
-	return CreateTlsCertificate(clientHello.ServerName)
+	return CreateTlsCertificate(clientHello.ServerName, -(365 * 24 * time.Hour), 200)
 }
 
 func StartHTTPSProxy(addr string, router socks.Dialer, data []byte) {

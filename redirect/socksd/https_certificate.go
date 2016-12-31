@@ -4,8 +4,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
+	"time"
 
-	"github.com/square/certstrap/pkix"
+	"github.com/ssoor/certstrap/pkix"
 	"github.com/ssoor/youniverse/assistant"
 )
 
@@ -254,7 +255,7 @@ func GetCAIntermediatePair() (certPair *certKeyPair, err error) {
 	return &certKeyPair{cert: cert, key: key}, nil
 }
 
-func CreateTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
+func CreateTlsCertificate(host string, startTimeOffset time.Duration, years int) (tlsCert *tls.Certificate, err error) {
 	var key *pkix.Key
 	var cert *pkix.Certificate
 
@@ -274,7 +275,7 @@ func CreateTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
 		return nil, err
 	}
 
-	if cert, err = pkix.CreateCertificateHost(certPair.cert, certPair.key, csr, 200); err != nil {
+	if cert, err = pkix.CreateCertificateHost(certPair.cert, certPair.key, csr, startTimeOffset, 200); err != nil {
 		log.Println("Create cert failed:", err)
 		return nil, err
 	}
