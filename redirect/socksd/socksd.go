@@ -69,7 +69,7 @@ func buildSetting(setting Setting) []socks.Dialer {
 	for _, upstream := range setting.Upstreams {
 		var forward socks.Dialer
 		var err error
-		forward = NewDecorateDirect(setting.DNSCacheTime, setting.DialTimeout)
+		forward = NewDecorateDirect(setting.DNSCacheTime, time.Duration(setting.DialTimeout))
 		forward, err = buildUpstream(upstream, forward)
 		if err != nil {
 			log.Warning("failed to BuildUpstream, err:", err)
@@ -79,7 +79,7 @@ func buildSetting(setting Setting) []socks.Dialer {
 	}
 
 	if len(allForward) == 0 {
-		router := NewDecorateDirect(setting.DNSCacheTime, setting.DialTimeout)
+		router := NewDecorateDirect(setting.DNSCacheTime, time.Duration(setting.DialTimeout))
 		allForward = append(allForward, router)
 	}
 
@@ -99,6 +99,7 @@ func (u *UpstreamDialer) backgroundUpdateServices() {
 		for _, upstream := range setting.Upstreams {
 			log.Info("\tUpstream :", upstream.Address)
 		}
+		log.Info("\tDial timeout time :", setting.DialTimeout)
 		log.Info("\tDNS cache timeout time :", setting.DNSCacheTime)
 		log.Info("\tNext flush interval time :", setting.IntervalTime)
 

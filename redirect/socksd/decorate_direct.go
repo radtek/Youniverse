@@ -12,7 +12,7 @@ type DecorateDirect struct {
 	timeoutDial time.Duration
 }
 
-func NewDecorateDirect(timeoutDNSCache int, timeoutDial int) *DecorateDirect {
+func NewDecorateDirect(timeoutDNSCache int, timeoutDial time.Duration) *DecorateDirect {
 	var dnsCache *DNSCache
 	if timeoutDNSCache != 0 {
 		dnsCache = NewDNSCache(timeoutDNSCache)

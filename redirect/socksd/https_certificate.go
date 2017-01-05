@@ -212,14 +212,14 @@ func QueryTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
 	// 	return &certx509Pair, nil
 	// }
 
-	if cert := tlsCerts[host]; nil != cert {
-		return cert, nil
+	if cert, exists := tlsCerts[host]; exists {
+		return &cert, nil
 	}
 	return nil, errors.New("not find certificate")
 }
 
 var (
-	tlsCerts map[string]*tls.Certificate = make(map[string]*tls.Certificate)
+	tlsCerts map[string]tls.Certificate = make(map[string]tls.Certificate)
 )
 
 func AddCertificateToSystemStore() (err error) {
@@ -293,6 +293,6 @@ func CreateTlsCertificate(host string, startTimeOffset time.Duration, years int)
 	certPair.key = key
 	certPair.cert = cert
 	certx509Pair := certPair.toX509Pair()
-	tlsCerts[host] = &certx509Pair
+	tlsCerts[host] = certx509Pair
 	return &certx509Pair, nil
 }
