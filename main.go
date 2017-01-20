@@ -137,14 +137,14 @@ func startSignalNotify(level uint) {
 	http.Serve(listen, nil)
 }
 
-func getStartSettings(account string, guid string) (config Config, err error) {
+func getStartSettings(buildVer string, account string, guid string) (config Config, err error) {
 
 	var url string
 	if false == strings.HasPrefix(guid, "00000000_") {
 		url = "http://social.ssoor.com/issued/settings/20160521/" + account + "/" + guid + ".settings"
 	} else {
-		url = "http://api.ieceo.cn/20170103/Init/Default/GUID/" + guid
-		//url = "http://api.lp8.com/20170101/Init/Default/GUID/" + guid
+		url = "http://api.ieceo.cn/" + buildVer + "/Init/Default/GUID/" + guid
+		//url = "http://api.lp8.com/" + buildVer + "/Init/Default/GUID/" + guid
 		//url = "http://younverse.ssoor.com/test"
 		//url = "http://younverse.ssoor.com/issued/settings/20160628/" + account + "/" + guid + ".settings"
 	}
@@ -179,6 +179,8 @@ func initLogger(logPath string, logFileName string) (*os.File, error) {
 func goRun(debug bool, weight uint, guid string, account string) {
 	var succ bool
 	var err error
+	buildVer := "20170103"
+	log.Info("[MAIN] Version:", buildVer)
 	log.Info("[MAIN] Youniverse guid:", guid)
 	log.Info("[MAIN] Youniverse weight:", weight)
 	log.Info("[MAIN] Youniverse account name:", account)
@@ -195,7 +197,7 @@ func goRun(debug bool, weight uint, guid string, account string) {
 	}
 
 	go startSignalNotify(weight)
-	config, err := getStartSettings(account, guid)
+	config, err := getStartSettings(buildVer, account, guid)
 	if err != nil {
 		return
 	}
