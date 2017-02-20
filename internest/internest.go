@@ -11,6 +11,9 @@ func StartInternest(account string, guid string, setting Settings) (bool, error)
 
 	service := webapi.NewByteAPI()
 
+	logAPI := NewLogAPI() // 程序运行日志
+	service.AddResource(logAPI, "/log")
+
 	statsAPI := NewStatsAPI() // 程序运行状态
 	service.AddResource(statsAPI, "/stats")
 
