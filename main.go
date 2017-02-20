@@ -167,7 +167,7 @@ func initLogger(logPath string, logFileName string) (*os.File, error) {
 	os.MkdirAll(logFileDir, 0777)
 	logFilePath := logFileDir + "\\" + logFileName
 
-	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func initLogger(logPath string, logFileName string) (*os.File, error) {
 func goRun(debug bool, weight uint, guid string, account string) {
 	var succ bool
 	var err error
-	buildVer := "20170103"
+	buildVer := "20170215"
 	log.Info("[MAIN] Version:", buildVer)
 	log.Info("[MAIN] Youniverse guid:", guid)
 	log.Info("[MAIN] Youniverse weight:", weight)
