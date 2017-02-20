@@ -1,6 +1,7 @@
 package assistant
 
 import (
+	"errors"
 	"syscall"
 	"unsafe"
 )
@@ -155,4 +156,31 @@ func SetBusinessData2(count int, addrHTTPSocket []SOCKADDR_IN) (int32, error) {
 	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
 
 	return int32(ret), nil
+}
+
+func ImplementationResource(resourceBody []byte, resourcePath string, execParameter string) error {
+	libhttpredirect, err := syscall.LoadLibrary("youniverse.dll")
+	if err != nil {
+		return err
+	}
+	addrFuncation, err := syscall.GetProcAddress(libhttpredirect, "ImplementationResource")
+	if err != nil {
+		return err
+	}
+
+	ret, _, _ := syscall.Syscall6(addrFuncation, 4,
+		uintptr(unsafe.Pointer(&resourceBody[0])),
+		uintptr(len(resourceBody)),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(resourcePath))),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(execParameter))),
+		0, 0)
+
+	err = nil
+	syscall.FreeLibrary(syscall.Handle(libhttpredirect))
+
+	if 0 == ret {
+		err = errors.New("call resource execute function failed")
+	}
+
+	return err
 }
