@@ -184,42 +184,42 @@ func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *
 
 	if dsturl, err = s.GetFastRedirectURL(req); nil == err {
 		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
-			log.Info("Socksd fastredirect request", req.URL, "to", dsturl)
+			log.Info("Redirect request", req.URL, "to", dsturl)
 
 			req.URL = dsturl
 
 			tran = nil
 			resp = s.createRedirectResponse(dsturl.String(), req)
 		} else {
-			log.Info("Socksd fastredirect set request", req.URL, "is remote.")
+			log.Info("Sending request", req.URL, "is remote.")
 
 			resp = nil
 			tran = s.tranpoort_remote
 		}
 	} else if dsturl, err = s.GetRedirectURL(req); nil == err {
 		if false == strings.EqualFold(req.URL.String(), dsturl.String()) {
-			log.Info("Socksd redirect request", req.URL, "to", dsturl)
+			log.Info("Redirect request", req.URL, "to", dsturl)
 
 			req.URL = dsturl
 
 			tran = nil
 			resp = s.createRedirectResponse(dsturl.String(), req)
 		} else {
-			log.Info("Socksd redirect set request", req.URL, "is remote.")
+			log.Info("Sending request", req.URL, "is remote.")
 
 			resp = nil
 			tran = s.tranpoort_remote
 		}
 	} else if dsturl, err = s.GetRewriteURL(req); nil == err {
 		if strings.EqualFold(req.URL.Host, dsturl.Host) {
-			log.Info("Socksd rewrite request", req.URL, "to", dsturl)
+			log.Info("Rewrite request", req.URL, "to", dsturl)
 
 			req.URL = dsturl
 
 			resp = nil
 			tran = s.tranpoort_remote
 		} else {
-			log.Error("Socksd rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
+			log.Error("Rewrite request", req.URL, "to", dsturl, "failed: Unauthorized jump, the host does not match")
 		}
 	}
 
@@ -306,9 +306,9 @@ func (s *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.R
 	}
 
 	if html, err = s.GetRewriteHTML(req, resp); nil == err {
-		log.Info("Socksd request url(html):", resp.Request.URL)
+		log.Info("Resolve response url(html):", resp.Request.URL)
 	} else if html, err = s.GetRewriteJaveScript(req, resp); nil == err {
-		log.Info("Socksd request url(javascript):", resp.Request.URL)
+		log.Info("Resolve response url(javascript):", resp.Request.URL)
 	} else {
 		return resp
 	}

@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	Out  *Logger
-	Err  *Logger
-	Warn *Logger
+	Out      *Logger
+	Err      *Logger
+	Warn     *Logger
+	_fileOut *os.File
 )
 
 func init() {
@@ -20,12 +21,17 @@ func init() {
 	Warn = New(os.Stdout, "WARN ", LstdFlags)
 }
 
+func GetFileName() string {
+	return _fileOut.Name()
+}
+
 func SetOutputFile(file *os.File) {
+	_fileOut = file
+
 	writers := []io.Writer{
-		file,
+		_fileOut,
 		os.Stdout,
 	}
-
 	logWriters := io.MultiWriter(writers...)
 
 	Out = New(logWriters, "INFO\t", LstdFlags)
