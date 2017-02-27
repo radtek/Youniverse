@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"strings"
 
+	"regexp"
+
 	"github.com/dlclark/regexp2"
 )
 
@@ -15,8 +17,9 @@ type JSONURLMatch struct {
 }
 
 type matchData struct {
-	matchs   []SMatch
-	urlRegex *regexp2.Regexp
+	matchs    []SMatch
+	urlRegex  *regexp.Regexp
+	urlRegex2 *regexp2.Regexp
 }
 type URLMatch struct {
 	data map[string][]matchData
@@ -29,8 +32,10 @@ func NewURLMatch() *URLMatch {
 func (sc *URLMatch) AddMatchs(jsonMatchs JSONURLMatch) (err error) {
 	var urlmatch matchData
 
-	if urlmatch.urlRegex, err = regexp2.Compile(jsonMatchs.Url, 0); err != nil {
-		return err
+	if urlmatch.urlRegex, err = regexp.Compile(jsonMatchs.Url); err != nil {
+		if urlmatch.urlRegex2, err = regexp2.Compile(jsonMatchs.Url, 0); err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < len(jsonMatchs.Match); i++ {
@@ -46,14 +51,20 @@ func (sc *URLMatch) AddMatchs(jsonMatchs JSONURLMatch) (err error) {
 	return nil
 }
 
-func (sc *URLMatch) matchReplaces(md []matchData, url string, src string) (dst string, err error) {
+func (sc *URLMatch) matchReplaces(md []matchData, url string, src []byte) (dst []byte, err error) {
 	for _, urlmatch := range md {
-		if isMatch, _ := urlmatch.urlRegex.MatchString(url); false == isMatch { // 当出错时，返回 false
-			continue
+		if nil != urlmatch.urlRegex2 {
+			if isMatch, _ := urlmatch.urlRegex2.MatchString(url); false == isMatch { // 当出错时，返回 false
+				continue
+			}
+		} else {
+			if isMatch := urlmatch.urlRegex.MatchString(url); false == isMatch { // 当出错时，返回 false
+				continue
+			}
 		}
 
 		for _, match := range urlmatch.matchs {
-			if dst, err := match.Replace(src); err == nil {
+			if dst, err = match.Replace(src); err == nil {
 				return dst, nil
 			}
 		}
@@ -62,7 +73,7 @@ func (sc *URLMatch) matchReplaces(md []matchData, url string, src string) (dst s
 	return src, errors.New("regular expression does not match")
 }
 
-func (sc *URLMatch) Replace(url *url.URL, src string) (dst string, err error) {
+func (sc *URLMatch) Replace(url *url.URL, src []byte) (dst []byte, err error) {
 	host := strings.ToLower(url.Host)
 
 	var exist bool

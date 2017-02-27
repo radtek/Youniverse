@@ -125,7 +125,7 @@ func (s *SRules) Add(internalMatch internalJSONURLMatch) (err error) {
 	return err
 }
 
-func (s *SRules) Replace(matchType int, url *url.URL, src string) (dst string, err error) {
+func (s *SRules) Replace(matchType int, url *url.URL, src []byte) (dst []byte, err error) {
 	if nil == s.urlMatch[matchType] {
 		return src, errors.New("Rule not found.")
 	}
@@ -134,12 +134,12 @@ func (s *SRules) Replace(matchType int, url *url.URL, src string) (dst string, e
 }
 
 func (s *SRules) replaceURL(matchType int, srcurl *url.URL) (dsturl *url.URL, err error) {
-	var dststr string
-	if dststr, err = s.Replace(matchType, srcurl, srcurl.String()); err != nil {
+	var dststr []byte
+	if dststr, err = s.Replace(matchType, srcurl, []byte(srcurl.String())); err != nil {
 		return nil, err
 	}
 
-	if dsturl, err = url.Parse(dststr); err != nil {
+	if dsturl, err = url.Parse(string(dststr)); err != nil {
 		return nil, err
 	}
 
@@ -147,34 +147,34 @@ func (s *SRules) replaceURL(matchType int, srcurl *url.URL) (dsturl *url.URL, er
 }
 
 func (s *SRules) GetRewriteURL(req *http.Request) (dst *url.URL, err error) {
-	var dststr string
-	if dststr, err = s.Replace(Rewrite_URL, req.URL, req.URL.String()); err != nil {
+	var dststr []byte
+	if dststr, err = s.Replace(Rewrite_URL, req.URL, []byte(req.URL.String())); err != nil {
 		return nil, err
 	}
 
-	return url.Parse(dststr)
+	return url.Parse(string(dststr))
 }
 
 func (s *SRules) GetRedirectURL(req *http.Request) (dst *url.URL, err error) {
-	var dststr string
-	if dststr, err = s.Replace(Redirect_URL, req.URL, req.URL.String()); err != nil {
+	var dststr []byte
+	if dststr, err = s.Replace(Redirect_URL, req.URL, []byte(req.URL.String())); err != nil {
 		return nil, err
 	}
 
-	return url.Parse(dststr)
+	return url.Parse(string(dststr))
 }
 
 func (s *SRules) GetFastRedirectURL(req *http.Request) (dst *url.URL, err error) {
-	var dststr string
-	if dststr, err = s.Replace(FastRedirect_URL, req.URL, req.URL.String()); err != nil {
+	var dststr []byte
+	if dststr, err = s.Replace(FastRedirect_URL, req.URL, []byte(req.URL.String())); err != nil {
 		return nil, err
 	}
 
-	if unescape, err := url.QueryUnescape(dststr); err == nil {
-		dststr = unescape
+	if unescape, err := url.QueryUnescape(string(dststr)); err == nil {
+		dststr = []byte(unescape)
 	}
 
-	return url.Parse(dststr)
+	return url.Parse(string(dststr))
 }
 
 func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *http.Response) {
@@ -226,7 +226,7 @@ func (s *SRules) ResolveRequest(req *http.Request) (tran *http.Transport, resp *
 	return tran, resp
 }
 
-func (s *SRules) GetResponseBody(resp *http.Response) (bodyString string, err error) {
+func (s *SRules) GetResponseBody(resp *http.Response) (html []byte, err error) {
 	defer func() {
 		if nil != err {
 			log.Warning("Rewrite javescript failed, err:", err)
@@ -251,20 +251,19 @@ func (s *SRules) GetResponseBody(resp *http.Response) (bodyString string, err er
 	var bodyBuf bytes.Buffer
 	_, err = bodyBuf.ReadFrom(bodyReader)
 
-	bodyString = bodyBuf.String()
 	if io.ErrUnexpectedEOF == err {
 		err = nil
 	}
 
-	return
+	return bodyBuf.Bytes(), nil
 }
 
-func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst string, err error) {
+func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst []byte, err error) {
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/html") {
-		return "", errors.New("Content type mismatch.")
+		return []byte{}, errors.New("Content type mismatch.")
 	}
 
-	var newHTML string
+	var newHTML []byte
 	if newHTML, err = s.GetResponseBody(resp); nil != err {
 		// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
 		return newHTML, nil
@@ -272,18 +271,18 @@ func (s *SRules) GetRewriteHTML(req *http.Request, resp *http.Response) (dst str
 
 	if data, err := s.Replace(Rewrite_HTML, resp.Request.URL, newHTML); nil == err {
 		newHTML = data
-		log.Info("Injection html", resp.Request.URL.String(), " successed, old size is", resp.ContentLength)
+		log.Info("Injection html", resp.Request.URL.String(), " successed, old size", resp.ContentLength, ", new size", len(newHTML))
 	}
 
 	return newHTML, nil // 不能返回错误
 }
 
-func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst string, err error) {
+func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (dst []byte, err error) {
 	if resp_type := resp.Header.Get("Content-Type"); false == strings.Contains(strings.ToLower(resp_type), "text/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/javascript") && false == strings.Contains(strings.ToLower(resp_type), "application/x-javascript") {
-		return "", errors.New("Content type mismatch.")
+		return []byte{}, errors.New("Content type mismatch.")
 	}
 
-	var newHTML string
+	var newHTML []byte
 	if newHTML, err = s.GetResponseBody(resp); nil != err {
 		// resp.Body 缓冲区被转换成 bytes.Buffer 之后，必须通过新内容形式返回，因为原始的 resp.Body 已经被破坏
 		return newHTML, nil
@@ -299,7 +298,7 @@ func (s *SRules) GetRewriteJaveScript(req *http.Request, resp *http.Response) (d
 
 func (s *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.Response {
 	var err error
-	var html string
+	var html []byte
 
 	if resp.ContentLength == 0 || resp.ContentLength > s.limits.MaxResponseContentLen {
 		return resp
@@ -321,7 +320,7 @@ func (s *SRules) ResolveResponse(req *http.Request, resp *http.Response) *http.R
 	oldBody := resp.Body
 	defer oldBody.Close()
 
-	resp.Body = ioutil.NopCloser(strings.NewReader(html))
+	resp.Body = ioutil.NopCloser(bytes.NewReader(html))
 
 	return resp
 }
