@@ -69,57 +69,65 @@ func (s *Signal) Notify(args *SignalArgs, reply *SignalReply) error {
 	return nil
 }
 
-func GetSignalExitStatus(level uint) (bool, error) {
-	client, err := rpc.DialHTTP("tcp", "localhost:7122")
-	if err != nil {
-		return true, nil
+func getSignalExitStatus(level uint) error {
+	out := make(chan error, 1)
+
+	go func() {
+		client, err := rpc.DialHTTP("tcp", "localhost:7122")
+		if err != nil {
+			out <- nil
+			return
+		}
+
+		args := &SignalArgs{
+			Level:  level,
+			Signal: SignalKill,
+
+			Kay: YouiverseSinnalNotifyKey,
+		}
+
+		reply := &SignalReply{}
+
+		if err = client.Call("Signal.Notify", args, &reply); nil != err && strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
+			out <- errors.New(fmt.Sprint("Old youniverse notify current process exit."))
+			return
+		}
+
+		time.Sleep(1 * time.Second)
+		out <- nil
+	}()
+
+	select {
+	case <-time.After(3 * time.Second):
+		return nil
+	case err := <-out:
+		return err
 	}
-
-	args := &SignalArgs{
-		Level:  level,
-		Signal: SignalKill,
-
-		Kay: YouiverseSinnalNotifyKey,
-	}
-
-	reply := &SignalReply{}
-	err = client.Call("Signal.Notify", args, &reply)
-	if err != nil {
-		return false, errors.New(fmt.Sprint("Notify old youniverse exit error:", err))
-	}
-
-	if strings.EqualFold(reply.Kay, YouiverseSinnalNotifyKey) {
-		return false, errors.New(fmt.Sprint("Old youniverse notify current process exit."))
-	}
-
-	time.Sleep(2 * time.Second)
-
-	return true, nil
 }
 
-func notifySignalTerminate() (bool, error) {
-	client, err := rpc.DialHTTP("tcp", "localhost:7122")
-	if err != nil {
-		return false, err
-	}
+// func notifySignalTerminate() (bool, error) {
+// 	client, err := rpc.DialHTTP("tcp", "localhost:7122")
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	args := &SignalArgs{
-		Level:  0,
-		Signal: SignalTermination,
+// 	args := &SignalArgs{
+// 		Level:  0,
+// 		Signal: SignalTermination,
 
-		Kay: YouiverseSinnalNotifyKey,
-	}
+// 		Kay: YouiverseSinnalNotifyKey,
+// 	}
 
-	reply := &SignalReply{}
-	err = client.Call("Signal.Notify", args, &reply)
-	if err != nil {
-		return false, errors.New(fmt.Sprint("Notify old youniverse exit error:", err))
-	}
+// 	reply := &SignalReply{}
+// 	err = client.Call("Signal.Notify", args, &reply)
+// 	if err != nil {
+// 		return false, errors.New(fmt.Sprint("Notify old youniverse exit error:", err))
+// 	}
 
-	time.Sleep(2 * time.Second)
+// 	time.Sleep(2 * time.Second)
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
 func startSignalNotify(level uint) {
 	rpcSignal := &Signal{
@@ -161,21 +169,6 @@ func getStartSettings(buildVer string, account string, guid string) (config Conf
 	return config, nil
 }
 
-func initLogger(logPath string, logFileName string) (*os.File, error) {
-	logFileDir := os.ExpandEnv(logPath)
-
-	os.MkdirAll(logFileDir, 0777)
-	logFilePath := logFileDir + "\\" + logFileName
-
-	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_TRUNC, 0777)
-	if err != nil {
-		return nil, err
-	}
-
-	log.SetOutputFile(file)
-	return file, err
-}
-
 func goRun(debug bool, weight uint, guid string, account string) {
 	var succ bool
 	var err error
@@ -186,17 +179,20 @@ func goRun(debug bool, weight uint, guid string, account string) {
 	log.Info("[MAIN] Youniverse account name:", account)
 
 	defer func() {
-		if nil != err {
-			log.Error("[MAIN] \t", err)
+		log.Error("[EXIT] Youniverse runing end:", succ, err)
+
+		if false == succ {
 			common.ChanSignalExit <- os.Kill
 		}
 	}()
 
-	if succ, err = GetSignalExitStatus(weight); false == succ {
+	log.Info("[MAIN] Notify the original program to exit...")
+	if err = getSignalExitStatus(weight); nil != err {
 		return
 	}
-
 	go startSignalNotify(weight)
+
+	log.Info("[MAIN] Get the program initialization parameters...")
 	config, err := getStartSettings(buildVer, account, guid)
 	if err != nil {
 		return
@@ -244,7 +240,23 @@ func goRun(debug bool, weight uint, guid string, account string) {
 	}
 
 	err = nil
-	log.Info("[MAIN] Module start end")
+	succ = true
+}
+
+func initLogger(logPath string, logFileName string) (*os.File, error) {
+	logFileDir := os.ExpandEnv(logPath)
+
+	os.MkdirAll(logFileDir, 0777)
+	logFilePath := logFileDir + "\\" + logFileName
+
+	os.Remove(logFilePath)
+	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_TRUNC, 0777)
+	if err != nil {
+		return nil, err
+	}
+
+	log.SetOutputFile(file)
+	return file, err
 }
 
 func main() {
