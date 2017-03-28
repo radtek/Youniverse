@@ -5,12 +5,17 @@ import (
 	"net/http"
 	"time"
 
+	"strings"
+
+	"golang.org/x/net/websocket"
+
 	"github.com/ssoor/socks"
 	"github.com/ssoor/youniverse/log"
 )
 
 type HTTPSProxyHandler struct {
-	proxy *socks.HTTPProxy
+	proxy     *socks.HTTPProxy
+	websocket websocket.Handler
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -27,16 +32,18 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-func copyHeader(dst, src http.Header) {
-	for k, vv := range src {
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
-	}
-}
-
 func (h *HTTPSProxyHandler) ServeHTTP(rw http.ResponseWriter, request *http.Request) {
-	h.proxy.ServeHTTP(rw, request)
+	request.URL.Scheme = "https"
+	request.URL.Host = request.Host
+
+	var handler http.Handler = h.proxy
+
+	if strings.EqualFold(request.Header.Get("Connection"), "Upgrade") && strings.EqualFold(request.Header.Get("Upgrade"), "websocket") {
+		handler = h.websocket
+		request.URL.Scheme = "wss"
+	}
+
+	handler.ServeHTTP(rw, request)
 }
 
 func HTTPSGetCertificate(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
@@ -54,8 +61,11 @@ func StartHTTPSProxy(addr string, router socks.Dialer, tran *HTTPTransport) {
 			GetCertificate: HTTPSGetCertificate,
 		},
 
-		Addr:    addr,
-		Handler: &HTTPSProxyHandler{proxy: socks.NewHTTPProxy("https", router, tran)},
+		Addr: addr,
+		Handler: &HTTPSProxyHandler{
+			websocket: websocket.Handler(WebsocketEcho),
+			proxy:     socks.NewHTTPProxy("https", router, tran),
+		},
 	}
 
 	if err := serverHTTPS.ListenAndServeTLS("", ""); nil != err {
