@@ -219,7 +219,8 @@ func QueryTlsCertificate(host string) (tlsCert *tls.Certificate, err error) {
 }
 
 var (
-	tlsCerts map[string]tls.Certificate = make(map[string]tls.Certificate)
+	tlsCertsKey *pkix.Key
+	tlsCerts    map[string]tls.Certificate = make(map[string]tls.Certificate)
 )
 
 func AddCertificateToSystemStore() (err error) {
@@ -255,13 +256,16 @@ func GetCAIntermediatePair() (certPair *certKeyPair, err error) {
 	return &certKeyPair{cert: cert, key: key}, nil
 }
 
-func CreateTlsCertificate(host string, startTimeOffset time.Duration, years int) (tlsCert *tls.Certificate, err error) {
-	var key *pkix.Key
+func CreateTlsCertificate(key *pkix.Key, host string, startTimeOffset time.Duration, years int) (tlsCert *tls.Certificate, err error) {
 	var cert *pkix.Certificate
 
-	if key, err = pkix.CreateRSAKey(1024); err != nil {
-		log.Println("Create RSA key failed:", err)
-		return nil, err
+	if nil == key {
+		if tlsCertsKey, err = pkix.CreateRSAKey(1024); err != nil {
+			log.Println("Create RSA key failed:", err)
+			return nil, err
+		}
+
+		key = tlsCertsKey
 	}
 
 	csr, err := pkix.CreateCertificateSigningRequest(key, "Youniverse Trust Network", nil, []string{host}, "Youniverse Redemption", "CN", "China", "Beijing", host)

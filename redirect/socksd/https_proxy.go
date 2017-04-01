@@ -51,7 +51,7 @@ func HTTPSGetCertificate(clientHello *tls.ClientHelloInfo) (cert *tls.Certificat
 		return cert, err
 	}
 
-	return CreateTlsCertificate(clientHello.ServerName, -(365 * 24 * time.Hour), 200)
+	return CreateTlsCertificate(nil, clientHello.ServerName, -(365 * 24 * time.Hour), 200)
 }
 
 func StartHTTPSProxy(addr string, router socks.Dialer, tran *HTTPTransport) {

@@ -179,7 +179,7 @@ func goRun(debug bool, weight uint, guid string, account string) {
 	log.Info("[MAIN] Youniverse account name:", account)
 
 	defer func() {
-		log.Error("[EXIT] Youniverse runing end:", succ, err)
+		log.Info("[EXIT] Youniverse start end:", succ, err)
 
 		if false == succ {
 			common.ChanSignalExit <- os.Kill
