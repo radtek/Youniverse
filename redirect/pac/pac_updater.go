@@ -108,14 +108,19 @@ func (p *PACUpdater) backgroundUpdate() {
 					p.set(data)
 					log.Info("update rules from", pac.LocalRules, "succeeded")
 				}
+			}else{
+				log.Info("update rules from", pac.LocalRules, "failed, error:", err)
 			}
 
 			if rules, err := loadRemoteRule(pac.RemoteRules); err == nil {
+				
 				if data, err := pg.Generate(pacindex, rules); err == nil {
 					p.set(data)
 					duration = 24 * time.Hour
 					log.Info("update rules from", pac.RemoteRules, "succeeded")
 				}
+			}else{
+				log.Info("update rules from", pac.RemoteRules, "failed, error:", err)
 			}
 		}
 
